@@ -111,6 +111,36 @@ function dust_correct!(masks)
     return nothing
 end
 
+function mean_filter!(X, length_scale)
+    iX = IntegralArray(X)
+    @inbounds for i in CartesianIndex(1,1):CartesianIndex(size(X))
+        x, y = i.I
+        x_int = x±length_scale
+        y_int = y±length_scale
+        x_int = Interval(max(leftendpoint(x_int), 1),
+                         min(rightendpoint(x_int), size(X)[1]))
+        y_int = Interval(max(leftendpoint(y_int), 1),
+                         min(rightendpoint(y_int), size(X)[2]))
+        X[i] = iX[x_int, y_int]/(width(x_int)*width(y_int))
+    end
+    return nothing
+end
+
+function normalize_local_contrast_output(normalized, images, images_copy, blockDiameter, fpMean)
+	length_scale = Int((blockDiameter-1)/2)
+    for t in 1:size(images, 3)
+		img = images[:,:,t]
+		img_copy = images_copy[:,:,t]
+		mean_filter!(img_copy, length_scale)
+		img = img - img_copy
+		img .+= fpMean
+		@. img[img < 0.0] = 0.0
+		@. img[img > 1.0] = 1.0
+        normalized[:,:,t] = img  
+    end
+    return normalized 
+end
+
 function normalize_local_contrast(img, img_copy, blockDiameter)
 	img = 1 .- img
 	img_copy = 1 .- img_copy
@@ -169,10 +199,12 @@ function stack_preprocess(img_stack, normalized_stack, registered_stack, blockDi
 end
 
 function output_images!(stack, masks, overlay, dir, filename)
-	flat_stack = vec(stack)
-    img_min = quantile(flat_stack, 0.0035)
-    img_max = quantile(flat_stack, 0.9965)
-    adjust_histogram!(stack, LinearStretching(src_minval=img_min, src_maxval=img_max, dst_minval=0, dst_maxval=1))
+    filename = split(filename, "/")[end]
+    normalized = similar(stack)
+	fpMax = maximum(stack)
+	fpMin = minimum(stack)
+	fpMean = (fpMax - fpMin) / 2.0 + fpMin
+	normalized = normalize_local_contrast_output(normalized, stack, copy(stack), 101, fpMean)
 	stack = Gray{N0f8}.(stack)
     save("$dir/Processed images/$filename.tif", stack)
     @inbounds for i in CartesianIndices(stack)
@@ -183,6 +215,7 @@ function output_images!(stack, masks, overlay, dir, filename)
 end
 
 function extract_base_and_ext(filename::String)
+    # The batch criterion is that there is a number at the end of the filename
     matches = match(r"^(.*\D)\d+(\.[^\.]+)$", filename)
     if isnothing(matches)
         error("Filename $filename does not satisfy batch criteria")
@@ -203,7 +236,6 @@ function timelapse_processing(images, blockDiameter, ntimepoints, shift_thresh, 
         dust_correct!(masks)
     end
     overlay = zeros(RGB{N0f8}, size(output_stack)...)
-    output_images!(images, masks, overlay, dir, filename)
     biomasses = zeros(Float64, ntimepoints)
     if Imin != nothing
         for t in 1:ntimepoints
@@ -214,6 +246,7 @@ function timelapse_processing(images, blockDiameter, ntimepoints, shift_thresh, 
             @inbounds biomasses[t] = @views mean((1 .- images[:,:,t]) .* masks[:,:,t])
         end
     end
+    output_images!(images, masks, overlay, dir, filename)
     return biomasses
 end
 
@@ -225,7 +258,6 @@ function image_processing(image, blockDiameter, fixed_thresh, sig, dir, filename
     normalized_blurred = imfilter(img_normalized, Kernel.gaussian(sig))
     mask = normalized_blurred .> fixed_thresh
     overlay = zeros(RGB{N0f8}, size(image)...)
-    output_images!(image, mask, overlay, dir, filename)
     if Imin != nothing && Imax != nothing
         biomass = mean((-1 .* log10.((image .- Imin) ./ (Imax .- Imin))) .* mask)
         return biomass
@@ -233,10 +265,11 @@ function image_processing(image, blockDiameter, fixed_thresh, sig, dir, filename
         biomass = mean((1 .- image) .* mask)
         return biomass
     end
+    output_images!(image, mask, overlay, dir, filename)
 end
 
 function analysis_main()
-    config = parsefile("experiment_config.json")
+    config = JSON.parsefile("experiment_config.json")
     images_directories  = config["images_directory"]
     dust_correction = config["dust_correction"]
     batch = config["batch_processing"]

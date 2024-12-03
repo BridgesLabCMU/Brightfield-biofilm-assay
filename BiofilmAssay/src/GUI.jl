@@ -206,7 +206,7 @@ function GUI_main()
 
     function on_done(button)
         # Read value from spin button
-        fixed_thresh = GtkSpinButton(spin_button).value
+        fixed_thresh = spin_button.value
         
         if dust_correction_checkbox.active == true
             dust_correction = "True" 
@@ -228,7 +228,7 @@ function GUI_main()
         )
         
         open("experiment_config.json", "w") do f
-            write(f, JSON.json(config, 4))
+            JSON.print(f, config)
         end
     end
 
