@@ -121,22 +121,34 @@ function mean_filter!(X, length_scale)
                          min(rightendpoint(x_int), size(X)[1]))
         y_int = Interval(max(leftendpoint(y_int), 1),
                          min(rightendpoint(y_int), size(X)[2]))
-        X[i] = iX[x_int, y_int]/(width(x_int)*width(y_int))
+        X[i] = iX[x_int, y_int]/(IntervalSets.width(x_int)*IntervalSets.width(y_int))
     end
     return nothing
 end
 
 function normalize_local_contrast_output(normalized, images, images_copy, blockDiameter, fpMean)
 	length_scale = Int((blockDiameter-1)/2)
-    for t in 1:size(images, 3)
-		img = images[:,:,t]
-		img_copy = images_copy[:,:,t]
-		mean_filter!(img_copy, length_scale)
-		img = img - img_copy
-		img .+= fpMean
-		@. img[img < 0.0] = 0.0
-		@. img[img > 1.0] = 1.0
-        normalized[:,:,t] = img  
+    if length(size(images)) == 3
+        for t in 1:size(images, 3)
+            img = images[:,:,t]
+            img_copy = images_copy[:,:,t]
+            mean_filter!(img_copy, length_scale)
+            img = img - img_copy
+            img .+= fpMean
+            @. img[img < 0.0] = 0.0
+            @. img[img > 1.0] = 1.0
+            normalized[:,:,t] = img  
+        end
+    elseif length(size(images)) == 2
+        img_copy = images_copy
+        mean_filter!(img_copy, length_scale)
+        images = images - img_copy
+        images .+= fpMean
+        @. images[images < 0.0] = 0.0
+        @. images[images > 1.0] = 1.0
+        normalized .= images
+    else
+        error("Dimension error in normalize_local_contrast_output")
     end
     return normalized 
 end
@@ -198,20 +210,35 @@ function stack_preprocess(img_stack, normalized_stack, registered_stack, blockDi
     return img_stack, processed_stack, Imin
 end
 
-function output_images!(stack, masks, overlay, dir, filename)
+function write_OD_images!(OD_images, dir, filename)
+    if length(size(OD_images)) == 3 
+        for t in 1:size(OD_images, 3)
+            tif.imwrite("$dir/Processed images/$filename"*"_OD"*"_t"*string(t)*".tif", 
+                        OD_images[:,:,t])
+        end
+    elseif length(size(OD_images)) == 2
+        tif.imwrite("$dir/Processed images/$filename"*"_OD.tif", 
+                    OD_images)
+    end
+end
+
+function output_images!(stack, masks, overlay, OD_images, dir, filename)
     filename = split(filename, "/")[end]
     normalized = similar(stack)
 	fpMax = maximum(stack)
 	fpMin = minimum(stack)
 	fpMean = (fpMax - fpMin) / 2.0 + fpMin
 	normalized = normalize_local_contrast_output(normalized, stack, copy(stack), 101, fpMean)
-	stack = Gray{N0f8}.(stack)
-    save("$dir/Processed images/$filename.tif", stack)
-    @inbounds for i in CartesianIndices(stack)
-        gray_val = RGB{N0f8}(stack[i], stack[i], stack[i])
+	normalized = Gray{N0f8}.(normalized)
+    save("$dir/Processed images/$filename.tif", normalized)
+    @inbounds for i in CartesianIndices(normalized)
+        gray_val = RGB{N0f8}(normalized[i], normalized[i], normalized[i])
         overlay[i] = masks[i] ? RGB{N0f8}(0,1,1) : gray_val
     end
     save("$dir/Processed images/$filename"*"mask.tif", overlay)
+    if OD_images != nothing
+        write_OD_images!(OD_images, dir, filename)
+    end
 end
 
 function extract_base_and_ext(filename::String)
@@ -225,7 +252,7 @@ function extract_base_and_ext(filename::String)
     return base, ext
 end
 
-function timelapse_processing(images, blockDiameter, ntimepoints, shift_thresh, fixed_thresh, sig, dust_correction, dir, filename, Imin)
+function timelapse_processing(images, blockDiameter, ntimepoints, shift_thresh, fixed_thresh, sig, dust_correction, dir, filename, Imin, Imax)
     images = Float64.(images)
     normalized_stack = similar(images)
     registered_stack = similar(images)
@@ -237,16 +264,23 @@ function timelapse_processing(images, blockDiameter, ntimepoints, shift_thresh, 
     end
     overlay = zeros(RGB{N0f8}, size(output_stack)...)
     biomasses = zeros(Float64, ntimepoints)
+    OD_images = nothing
     if Imin != nothing
+        OD_images = Array{Float32, 3}(undef, size(images))
         for t in 1:ntimepoints
-            @inbounds biomasses[t] = @views mean((-1 .* log10.((images[:,:,t] .- Imin) ./ (images[:,:,1] .- Imin))) .* masks[:,:,t])
+            if Imax != nothing
+                OD_images[:,:,t] = @views (-1 .* log10.((images[:,:,t] .- Imin) ./ (Imax .- Imin)))
+            else
+                OD_images[:,:,t] = @views (-1 .* log10.((images[:,:,t] .- Imin) ./ (images[:,:,1] .- Imin)))
+            end
+            @inbounds biomasses[t] = @views mean(OD_images[:,:,t] .* masks[:,:,t])
         end
     else
         for t in 1:ntimepoints
             @inbounds biomasses[t] = @views mean((1 .- images[:,:,t]) .* masks[:,:,t])
         end
     end
-    output_images!(images, masks, overlay, dir, filename)
+    output_images!(images, masks, overlay, OD_images, dir, filename)
     return biomasses
 end
 
@@ -258,14 +292,17 @@ function image_processing(image, blockDiameter, fixed_thresh, sig, dir, filename
     normalized_blurred = imfilter(img_normalized, Kernel.gaussian(sig))
     mask = normalized_blurred .> fixed_thresh
     overlay = zeros(RGB{N0f8}, size(image)...)
+    OD_image = nothing
+    biomass = nothing
     if Imin != nothing && Imax != nothing
-        biomass = mean((-1 .* log10.((image .- Imin) ./ (Imax .- Imin))) .* mask)
-        return biomass
+        OD_image = Array{Float32, 2}(undef, size(image))
+        OD_image .= (-1 .* log10.((image .- Imin) ./ (Imax .- Imin)))
+        biomass = mean(OD_image .* mask)
     else
         biomass = mean((1 .- image) .* mask)
-        return biomass
     end
-    output_images!(image, mask, overlay, dir, filename)
+    output_images!(image, mask, overlay, OD_image, dir, filename)
+    return biomass
 end
 
 function analysis_main()
@@ -322,7 +359,7 @@ function analysis_main()
                                                              fixed_thresh,
                                                              sig,
                                                              dust_correction,
-                                                             dir, target_base, Imin))
+                                                             dir, target_base, Imin, Imax))
                     push!(analyzed, file)
                 elseif length(filter(x -> x != 1, img_dims)) == 2
                     target_base, target_ext = extract_base_and_ext(file)
@@ -344,7 +381,7 @@ function analysis_main()
                                                                  fixed_thresh,
                                                                  sig,
                                                                  dust_correction,
-                                                                 dir, target_base, Imin))
+                                                                 dir, target_base, Imin, Imax))
                         for f in matching_files
                             push!(analyzed, f)
                         end

@@ -17,6 +17,9 @@ using CoordinateTransformations
 using AbstractFFTs
 using Compat
 using FFTW
+using PythonCall
+
+tif = pyimport("tifffile")
 
 include("GUI.jl")
 include("Analysis.jl")

@@ -1,11 +1,12 @@
 function display_images!(stack, masks, overlay)
-	flat_stack = vec(stack)
-    img_min = quantile(flat_stack, 0.0035)
-    img_max = quantile(flat_stack, 0.9965)
-    adjust_histogram!(stack, LinearStretching(src_minval=img_min, src_maxval=img_max, dst_minval=0, dst_maxval=1))
-	stack = Gray{N0f8}.(stack)
-    @inbounds for i in CartesianIndices(stack)
-        gray_val = RGB{N0f8}(stack[i], stack[i], stack[i])
+    normalized = similar(stack)
+	fpMax = maximum(stack)
+	fpMin = minimum(stack)
+	fpMean = (fpMax - fpMin) / 2.0 + fpMin
+	normalized = normalize_local_contrast_output(normalized, stack, copy(stack), 101, fpMean)
+	normalized = Gray{N0f8}.(normalized)
+    @inbounds for i in CartesianIndices(normalized)
+        gray_val = RGB{N0f8}(normalized[i], normalized[i], normalized[i])
         overlay[i] = masks[i] ? RGB{N0f8}(0,1,1) : gray_val
     end
     imshow(overlay)
@@ -44,7 +45,7 @@ function image_test!(image_path, fixed_thresh, blockDiameter, sig)
     image_normalized = imfilter(image_normalized, Kernel.gaussian(sig))
     mask = image_normalized .> fixed_thresh
     overlay = zeros(RGB{N0f8}, size(image)...)
-    display_images!(image, mask, overlay)
+    display_images!(Float64.(image), mask, overlay)
     return nothing
 end
 
@@ -92,7 +93,6 @@ function GUI_main()
                 filename_list = Gtk4.G_.get_files(dlgp)
                 sel = String[Gtk4.GLib.G_.get_path(Gtk4.GFile(f)) for f in Gtk4.GListModel(filename_list)]
                 push!(directories, sel...)
-                @show directories
                 destroy(dlg)
             end
         end
