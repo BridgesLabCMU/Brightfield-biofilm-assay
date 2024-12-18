@@ -25,8 +25,8 @@ function find_chunks(array, min_side, max_side)
         row_len = row_max - row_min + 1
         col_len = col_max - col_min + 1
         if row_len > max_side || col_len > max_side
-            for r_start in row_min:100:row_max
-                for c_start in col_min:100:col_max
+            for r_start in row_min:min_side:row_max
+                for c_start in col_min:min_side:col_max
                     r_end = min(r_start + max_side - 1, row_max)
                     c_end = min(c_start + max_side - 1, col_max)
                     push!(chunks, (r_start, r_end, c_start, c_end))
@@ -44,7 +44,7 @@ function find_chunks(array, min_side, max_side)
 end
 
 function main()
-    path = "/Volumes/T7 Shield/Brightfield_paper/"
+    path = "/mnt/e/Brightfield_paper/"
     cell_threshold = 3.0e-5
 	xy_res = 0.065 
     z_res = 0.3
