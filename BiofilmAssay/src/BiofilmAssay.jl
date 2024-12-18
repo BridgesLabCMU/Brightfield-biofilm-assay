@@ -1,3 +1,4 @@
+#module BiofilmAssay
 include("Pipeline.jl")
 using .Pipeline
 

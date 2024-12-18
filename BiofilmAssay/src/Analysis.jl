@@ -213,11 +213,11 @@ end
 function write_OD_images!(OD_images, dir, filename)
     if length(size(OD_images)) == 3 
         for t in 1:size(OD_images, 3)
-            tif.imwrite("$dir/Processed images/$filename"*"_OD"*"_t"*string(t)*".tif", 
+            save("$dir/Processed images/$filename"*"_OD"*"_t"*string(t)*".tif", 
                         OD_images[:,:,t])
         end
     elseif length(size(OD_images)) == 2
-        tif.imwrite("$dir/Processed images/$filename"*"_OD.tif", 
+        save("$dir/Processed images/$filename"*"_OD.tif", 
                     OD_images)
     end
 end
@@ -266,7 +266,7 @@ function timelapse_processing(images, blockDiameter, ntimepoints, shift_thresh, 
     biomasses = zeros(Float64, ntimepoints)
     OD_images = nothing
     if Imin != nothing
-        OD_images = Array{Float32, 3}(undef, size(images))
+        OD_images = Array{Gray{Float32}, 3}(undef, size(images))
         for t in 1:ntimepoints
             if Imax != nothing
                 OD_images[:,:,t] = @views (-1 .* log10.((images[:,:,t] .- Imin) ./ (Imax .- Imin)))
@@ -295,7 +295,7 @@ function image_processing(image, blockDiameter, fixed_thresh, sig, dir, filename
     OD_image = nothing
     biomass = nothing
     if Imin != nothing && Imax != nothing
-        OD_image = Array{Float32, 2}(undef, size(image))
+        OD_image = Array{Gray{Float32}, 2}(undef, size(image))
         OD_image .= (-1 .* log10.((image .- Imin) ./ (Imax .- Imin)))
         biomass = mean(OD_image .* mask)
     else
