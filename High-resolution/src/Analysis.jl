@@ -14,37 +14,27 @@ end
 
 function find_chunks(array, min_side, max_side)
     labeled_array = label_components(array)
-    num_components = maximum(labeled_array)
+    bounding_boxes = component_boxes(labeled_array)
+    areas = component_lengths(labeled_array)
+    biofilms = findall(x->x>1000, areas)
+    bounding_boxes = bounding_boxes[biofilms]
+    areas = areas[biofilms]
+    popfirst!(bounding_boxes)
+    popfirst!(areas)
+    num_components = length(bounding_boxes)-1
     chunks = []
-    for label in 1:num_components
-        region_coords = findall(labeled_array .== label)
-        rows = [x[1] for x in region_coords]
-        cols = [x[2] for x in region_coords]
-        row_min, row_max = minimum(rows), maximum(rows)
-        col_min, col_max = minimum(cols), maximum(cols)
-        row_len = row_max - row_min + 1
-        col_len = col_max - col_min + 1
-        if row_len > max_side || col_len > max_side
-            for r_start in row_min:min_side:row_max
-                for c_start in col_min:min_side:col_max
-                    r_end = min(r_start + max_side - 1, row_max)
-                    c_end = min(c_start + max_side - 1, col_max)
-                    push!(chunks, (r_start, r_end, c_start, c_end))
-                end
-            end
-        else
-            r_start = max(row_min, 1)
-            r_end = min(row_min + min_side - 1, size(array, 1))
-            c_start = max(col_min, 1)
-            c_end = min(col_min + min_side - 1, size(array, 2))
-            push!(chunks, (r_start, r_end, c_start, c_end))
+    for i in 1:num_components
+        @views if areas[i] > 250000
+            bounding_box = bounding_boxes[i]
+            # Split the bounding box into equal-sized chunks
+            # Delete the original from bounding boxes and add the chunks
         end
     end
     return chunks
 end
 
 function main()
-    path = "/mnt/e/Brightfield_paper/"
+    path = "/Volumes/T7 Shield/Brightfield_paper/"
     cell_threshold = 3.0e-5
 	xy_res = 0.065 
     z_res = 0.3

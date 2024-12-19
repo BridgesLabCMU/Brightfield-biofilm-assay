@@ -20,6 +20,15 @@ function ui()
         p("The average of {{N}} random numbers is {{m}}", class="st-module"),
         ])
     ])
+	row([
+		cell(class="st-col col-3", [
+			h1("A simple dashboard"),
+			slider(1:1000, :N),
+			p("The average of {{N}} random numbers is {{m}}", class="st-module"),
+			plot(:trace, layout=:layout)
+		])
+	])
+
 end
 
 @page("/", ui)
