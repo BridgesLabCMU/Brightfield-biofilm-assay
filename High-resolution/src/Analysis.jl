@@ -12,6 +12,19 @@ function invtform(xy_res, z_res)
     LinearMap(M)
 end 
 
+function split_indices(start_index, end_index) 
+	total_distance = end_index - start_index  
+	portions = ceil(total_distance / 500)  
+	while total_distance / portions < 100 
+		portions += 1 
+	end  
+	step = total_distance / portions 
+	split_indices = [round(Int, start_index + i * step) for i in 1:portions-1] 
+    prepend!(split_indices, [start_index])
+    push!(split_indices, end_index)
+	return split_indices 
+end  
+
 function find_chunks(array, min_side, max_side)
     labeled_array = label_components(array)
     bounding_boxes = component_boxes(labeled_array)
@@ -25,16 +38,28 @@ function find_chunks(array, min_side, max_side)
     chunks = []
     for i in 1:num_components
         @views if areas[i] > 250000
-            bounding_box = bounding_boxes[i]
+            @views bounding_box = bounding_boxes[i]
+            @views lower_row = bounding_box[1][1]
+            @views upper_row = bounding_box[1][2]
+            @views lower_column = bounding_box[2][1]
+            @views upper_column = bounding_box[2][2]
             # Split the bounding box into equal-sized chunks
+            row_splits = split_indices(lower_row, upper_row)
+            column_splits = split_indices(lower_column, upper_column)
             # Delete the original from bounding boxes and add the chunks
+            deleteat!(bounding_boxes, i)
+            for j in 1:length(row_splits)-1
+                for k in 1:length(column_splits)-1
+                    push!(bounding_boxes, CartesianIndices((row_splits[j]:row_splits[j+1], column_splits[k]:column_splits[k+1])))
+                end
+            end
         end
     end
-    return chunks
+    return bounding_boxes 
 end
 
 function main()
-    path = "/Volumes/T7 Shield/Brightfield_paper/"
+    path = "/mnt/f/Brightfield_paper/"
     cell_threshold = 3.0e-5
 	xy_res = 0.065 
     z_res = 0.3
@@ -54,18 +79,24 @@ function main()
         chunk_indices = find_chunks(crop_mask, 100, 500)
         biovolume = 0
         for chunk_index in chunk_indices
-            chunk = image[chunk_index...,:]
+            chunk = image[chunk_index,:]
+            @views crop_mask_chunk = crop_mask[chunk_index]
             height, width, slices = size(chunk)
+            @show height
+            @show width
+            @show slices
             warped_slices = round(Int, slices*z_res/xy_res)
-            warped =  warpedview(image, invtform(xy_res, z_res), 
+            warped = warpedview(chunk, invtform(xy_res, z_res), 
                       (1:height, 1:width, 1:warped_slices); 
                       method=Lanczos(4)) 
-            @floop for i in 1:warped_slices 
+            for i in 1:warped_slices 
                 @show i
                 @views slice_ = warped[:, :, i]
                 otsu_thresh = find_threshold(slice_, Otsu())
-                biovolume += sum(crop_mask .* (slice_ .> max(otsu_thresh/3, cell_threshold))) 
+                @views biovolume += sum(crop_mask_chunk .* (slice_ .> max(otsu_thresh/3, cell_threshold))) 
             end
+            warped = nothing
+            chunk = nothing
         end
         push!(biovolumes, biovolume)
         @show biovolumes
