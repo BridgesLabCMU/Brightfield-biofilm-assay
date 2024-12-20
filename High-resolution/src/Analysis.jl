@@ -39,10 +39,10 @@ function find_chunks(array, min_side, max_side)
     for i in 1:num_components
         @views if areas[i] > 250000
             @views bounding_box = bounding_boxes[i]
-            @views lower_row = bounding_box[1][1]
-            @views upper_row = bounding_box[1][2]
-            @views lower_column = bounding_box[2][1]
-            @views upper_column = bounding_box[2][2]
+            @views lower_row = first(bounding_box)[1] 
+            @views upper_row = last(bounding_box)[1] 
+            @views lower_column = first(bounding_box)[2] 
+            @views upper_column = last(bounding_box)[2] 
             # Split the bounding box into equal-sized chunks
             row_splits = split_indices(lower_row, upper_row)
             column_splits = split_indices(lower_column, upper_column)
@@ -59,7 +59,7 @@ function find_chunks(array, min_side, max_side)
 end
 
 function main()
-    path = "/mnt/f/Brightfield_paper/"
+    path = "/Volumes/T7 Shield/Brightfield_paper/"
     cell_threshold = 3.0e-5
 	xy_res = 0.065 
     z_res = 0.3
@@ -78,19 +78,17 @@ function main()
         imshow(crop_mask)
         chunk_indices = find_chunks(crop_mask, 100, 500)
         biovolume = 0
-        for chunk_index in chunk_indices
+        @show length(chunk_indices)
+        for (j,chunk_index) in enumerate(chunk_indices)
+            @show j
             chunk = image[chunk_index,:]
             @views crop_mask_chunk = crop_mask[chunk_index]
             height, width, slices = size(chunk)
-            @show height
-            @show width
-            @show slices
             warped_slices = round(Int, slices*z_res/xy_res)
             warped = warpedview(chunk, invtform(xy_res, z_res), 
                       (1:height, 1:width, 1:warped_slices); 
                       method=Lanczos(4)) 
             for i in 1:warped_slices 
-                @show i
                 @views slice_ = warped[:, :, i]
                 otsu_thresh = find_threshold(slice_, Otsu())
                 @views biovolume += sum(crop_mask_chunk .* (slice_ .> max(otsu_thresh/3, cell_threshold))) 
