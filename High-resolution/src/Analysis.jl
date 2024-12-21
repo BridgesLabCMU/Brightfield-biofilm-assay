@@ -63,8 +63,8 @@ end
 =#
 
 function main()
-    images_path = "/mnt/f/Brightfield_paper/"
-    numerical_data_path = "/mnt/f/Brightfield_paper/Data/"
+    images_path = "/Volumes/T7 Shield/Brightfield_paper/"
+    numerical_data_path = "/Volumes/T7 Shield/Brightfield_paper/Data/"
     cell_threshold = 3.0e-5
 	xy_res = 0.065 
     z_res = 0.3
@@ -77,14 +77,12 @@ function main()
         height, width, slices = size(image)
         zstack = imfilter(dropdims(sum(image, dims=3), dims=3), Kernel.gaussian(10))
         otsu_thresh = find_threshold(zstack, Otsu())
-        if otsu_thresh > 0.5*maximum(zstack)
-            @show filename
-        end
         if occursin("ara",filename)
             crop_mask = zstack .> max(zstack_thresh, otsu_thresh) 
-            @show otsu_thresh
+            @show otsu_thresh/maximum(zstack)
         else
-            @show otsu_thresh
+            println("S. pneumo")
+            @show otsu_thresh/maximum(zstack)
             crop_mask = zstack .> otsu_thresh 
         end
         imshow(crop_mask)
