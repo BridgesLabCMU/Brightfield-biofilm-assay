@@ -1,8 +1,12 @@
 using Makie 
 using CairoMakie
 using LsqFit
+using TiffImages
+using CSV
+using StatsBase
+using DataFrames
 CairoMakie.activate!(type="svg")
-path_to_sans = "/Users/jojo/Downloads/computer-modern/cmunss.ttf"
+path_to_sans = "/mnt/c/Downloads/cmunss.ttf"
 set_theme!(fonts = (; bold=path_to_sans, regular = path_to_sans))
 
 function fig1B!(Vc_biovolumes, Vc_biomasses, Pa_biovolumes, Pa_biomasses, Sp_biovolumes, Sp_biomasses)
@@ -32,6 +36,32 @@ function fig1B!(Vc_biovolumes, Vc_biomasses, Pa_biovolumes, Pa_biomasses, Sp_bio
     scatter!(ax, Vc_biovolumes, Vc_biomasses, color=:black)
 	lines!(ax, xbase, model.(xbase, (pstar,)), color="black")
     save("fig1B_Vc.svg", fig)
+end
+
+function fig1A_OD_image(OD_image_path)
+    image = Float64.(TiffImages.load(OD_image_path))
+    fig = Figure()
+    ax = Axis(fig[1, 1])
+    hm = heatmap!(ax, image, colormap=:plasma)
+	Colorbar(fig[:, end+1], hm)
+    save("fig1A_OD_image.svg", fig)
+end
+
+function fig1A_lineplot!(fig1A_data_path)
+    data = DataFrame(CSV.File(fig1A_data_path))
+    fig = Figure(size=(3.5*72, 3*72))
+    ax = Axis(fig[1, 1], xlabel="Time (h)", ylabel="Biofilm OD (a.u.)")
+    columns = select(data, Cols.(contains.("/E"))) 
+    avg = reduce(+, eachcol(columns)) ./ ncol(columns) 
+    stdev = dropdims(std(Array(columns), dims=2), dims=2)  
+    time = 0:0.5:nrow(columns)/2-0.5
+    lines!(ax, time, avg, color=:black)
+    band!(ax, time, avg-stdev, avg+stdev, color=(:black, 0.2))
+    scatter!(ax, time, avg, color=:white, marker=:circle,  strokewidth=1)
+	ax.rightspinevisible = false
+	ax.topspinevisible = false
+    fig
+    #save("fig1A_lineplot.svg", fig)
 end
 
 function fig1C!(Vc_biomasses, Pa_biomasses, Sp_biomasses)
@@ -65,6 +95,9 @@ end
 
 function main()
     data_folder = "../../Data/"
+    OD_image_path = "/mnt/f/Brightfield_paper/tests/OD_test.tif"
+    fig1A_data_path = data_folder*"fig1A_lineplot.csv"
+    fig1A_lineplot!(fig1A_data_path)
 end
 
 main()

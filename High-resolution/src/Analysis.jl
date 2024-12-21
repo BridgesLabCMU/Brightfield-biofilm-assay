@@ -1,4 +1,6 @@
 using Images
+using CSV
+using JSON
 using TiffImages: load
 using HistogramThresholding
 using ImageView
@@ -7,6 +9,7 @@ using ImageTransformations
 using CoordinateTransformations
 using Interpolations
 
+#=
 function invtform(xy_res, z_res)
     M = [1 0 0 ; 0 1 0; 0 0 xy_res/z_res]
     LinearMap(M)
@@ -57,48 +60,46 @@ function find_chunks(array, min_side, max_side)
     end
     return bounding_boxes 
 end
+=#
 
 function main()
-    path = "/Volumes/T7 Shield/Brightfield_paper/"
+    images_path = "/mnt/f/Brightfield_paper/"
+    numerical_data_path = "/mnt/f/Brightfield_paper/Data/"
     cell_threshold = 3.0e-5
 	xy_res = 0.065 
     z_res = 0.3
+    z_xy_ratio = z_res / xy_res 
     zstack_thresh = 0.4368
-    biovolumes = []
-    for filename in [f for f in readdir(path, join=true) if occursin(r"\.tif$", f)] 
+    thicknesses = []
+    files = [f for f in readdir(images_path, join=true) if occursin(r"\.tif$", f)]
+    for filename in files 
         image = load(filename; lazyio=true) 
+        height, width, slices = size(image)
         zstack = imfilter(dropdims(sum(image, dims=3), dims=3), Kernel.gaussian(10))
         otsu_thresh = find_threshold(zstack, Otsu())
+        if otsu_thresh > 0.5*maximum(zstack)
+            @show filename
+        end
         if occursin("ara",filename)
             crop_mask = zstack .> max(zstack_thresh, otsu_thresh) 
+            @show otsu_thresh
         else
             @show otsu_thresh
             crop_mask = zstack .> otsu_thresh 
         end
         imshow(crop_mask)
-        chunk_indices = find_chunks(crop_mask, 100, 500)
-        biovolume = 0
-        @show length(chunk_indices)
-        for (j,chunk_index) in enumerate(chunk_indices)
-            @show j
-            chunk = image[chunk_index,:]
-            @views crop_mask_chunk = crop_mask[chunk_index]
-            height, width, slices = size(chunk)
-            warped_slices = round(Int, slices*z_res/xy_res)
-            warped = warpedview(chunk, invtform(xy_res, z_res), 
-                      (1:height, 1:width, 1:warped_slices); 
-                      method=Lanczos(4)) 
-            for i in 1:warped_slices 
-                @views slice_ = warped[:, :, i]
-                otsu_thresh = find_threshold(slice_, Otsu())
-                @views biovolume += sum(crop_mask_chunk .* (slice_ .> max(otsu_thresh/3, cell_threshold))) 
-            end
-            warped = nothing
-            chunk = nothing
+        thickness = 0
+        for i in 1:slices
+            @views slice_ = image[:, :, i]
+            otsu_thresh = find_threshold(slice_, Otsu())
+            thickness += sum(crop_mask .* (slice_ .> max(otsu_thresh/3, cell_threshold))) 
         end
-        push!(biovolumes, biovolume)
-        @show biovolumes
+        thickness *= (z_xy_ratio*xy_res/(height*width))
+        push!(thicknesses, thickness)
+        @show thicknesses 
     end
+	data = Dict(zip(files, thicknesses))
+    CSV.write("../../Data/high_res_data.csv", data)
 end
 
 main()

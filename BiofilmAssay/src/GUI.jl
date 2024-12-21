@@ -218,6 +218,7 @@ function GUI_main()
         else
             batch_processing = "False" 
         end
+
         config = Dict(
             "images_directory" => directories,
             "Imin_path" => Imin,

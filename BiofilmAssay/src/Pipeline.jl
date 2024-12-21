@@ -22,7 +22,7 @@ include("GUI.jl")
 include("Analysis.jl")
 
 function pipeline()
-    GUI_main()
+    #GUI_main()
     analysis_main()
 end
 
