@@ -1,13 +1,14 @@
 using Images
 using CSV
 using JSON
-using TiffImages: load
+using TiffImages
 using HistogramThresholding
 using ImageView
 using FLoops
 using ImageTransformations
 using CoordinateTransformations
 using Interpolations
+using StatsBase
 
 #=
 function invtform(xy_res, z_res)
@@ -63,38 +64,45 @@ end
 =#
 
 function main()
-    images_path = "/Volumes/T7 Shield/Brightfield_paper/"
-    numerical_data_path = "/Volumes/T7 Shield/Brightfield_paper/Data/"
-    cell_threshold = 3.0e-5
+    images_path = "/mnt/f/Brightfield_paper/"
+    numerical_data_path = "/mnt/f/Brightfield_paper/Data/"
+    cell_threshold = 0.029
 	xy_res = 0.065 
     z_res = 0.3
     z_xy_ratio = z_res / xy_res 
     zstack_thresh = 0.4368
     thicknesses = []
-    files = [f for f in readdir(images_path, join=true) if occursin(r"\.tif$", f)]
+    files = [f for f in readdir(images_path, join=true) if occursin(r"\.tif$", f) && (occursin("D39", f) || occursin("36", f) || occursin("Pflu", f))]
     for filename in files 
-        image = load(filename; lazyio=true) 
+        @show filename
+        image = TiffImages.load(filename; lazyio=true) 
         height, width, slices = size(image)
         zstack = imfilter(dropdims(sum(image, dims=3), dims=3), Kernel.gaussian(10))
         otsu_thresh = find_threshold(zstack, Otsu())
         if occursin("ara",filename)
             crop_mask = zstack .> max(zstack_thresh, otsu_thresh) 
-            @show otsu_thresh/maximum(zstack)
+            #@show otsu_thresh/maximum(zstack)
         else
             println("S. pneumo")
-            @show otsu_thresh/maximum(zstack)
+            #@show otsu_thresh/maximum(zstack)
             crop_mask = zstack .> otsu_thresh 
         end
-        imshow(crop_mask)
         thickness = 0
+        mask = Array{Gray{Bool}, 3}(undef, size(image))
         for i in 1:slices
             @views slice_ = image[:, :, i]
             otsu_thresh = find_threshold(slice_, Otsu())
-            thickness += sum(crop_mask .* (slice_ .> max(otsu_thresh/3, cell_threshold))) 
+            if i == 1 
+                cell_threshold = (otsu_thresh/0.0477)*0.029 
+            end
+            mask[:,:,i] = crop_mask .* (slice_ .> max(otsu_thresh, cell_threshold))
+            @views thickness += sum(mask[:,:,i]) 
         end
+        #imshow(crop_mask) 
         thickness *= (z_xy_ratio*xy_res/(height*width))
         push!(thicknesses, thickness)
         @show thicknesses 
+        imshow(mask)
     end
 	data = Dict(zip(files, thicknesses))
     CSV.write("../../Data/high_res_data.csv", data)

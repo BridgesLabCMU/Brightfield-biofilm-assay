@@ -1,9 +1,9 @@
-module Analysis
+module utils
 
-export analysis_main
+export load_raw_display, load_processed_display, image_test, timelapse_test, analysis_main
 
-using NaturalSort
 using TiffImages
+using NaturalSort
 using IntegralArrays
 using IntervalSets
 using Images 
@@ -17,6 +17,77 @@ using FFTW
 
 round_odd(x) = div(x, 2) * 2 + 1
 compmax(x) = length(x) > 1 ? maximum(x[1:end]) : 0
+
+function load_raw_display(file_path, filenames)
+    ntimepoints = length(filenames)
+    if ntimepoints == 0
+        return nothing
+    elseif ntimepoints == 1
+        @views img = TiffImages.load(joinpath(file_path, filenames[1]))
+    else
+        @views dummy_img = TiffImages.load(joinpath(file_path, filenames[1]); lazyio=true)
+        height, width = size(dummy_img)
+        img = Array{eltype(dummy_img), 3}(undef, height, width, ntimepoints)
+        filenames = sort(filenames, lt=natural)
+        for i in 1:ntimepoints
+            @views img[:,:,i] = TiffImages.load(joinpath(file_path, filenames[i]))
+        end
+    end
+    return img
+end
+
+function load_processed_display(file_path, filename)
+    if filename == "" 
+        return nothing, nothing
+    else
+        if occursin("mask", filename)
+            overlay = TiffImages.load(joinpath(file_path, filename))
+            processed_filename = replace(filename, "mask" => "")
+            processed_image = TiffImages.load(joinpath(file_path, processed_filename))
+        else
+            processed_image = TiffImages.load(joinpath(file_path, filename))
+            overlay_filename = replace(filename, ".tif" => "mask.tif")
+            overlay = TiffImages.load(joinpath(file_path, overlay_filename))
+        end
+    end
+    return processed_image, overlay 
+end
+
+function preprocess_noreg!(img_stack, normalized_stack, blockDiameter, sig)       
+    @inbounds for t in 1:size(img_stack, 3)
+        img = img_stack[:,:,t]
+        img_copy = img_stack[:,:,t] 
+        img_normalized = normalize_local_contrast(img, img_copy, 
+                                    blockDiameter)
+        normalized_stack[:,:,t] = imfilter(img_normalized, Kernel.gaussian(sig))
+    end
+end
+
+function timelapse_test(file_path, filenames, fixed_thresh, blockDiameter, sig)
+    filenames = sort(filenames, lt=natural)
+    @views trial_image = TiffImages.load(joinpath(file_path, filenames[1]); lazyio=true)
+    height, width = size(trial_image)
+    ntimepoints = length(filenames)
+    stack = Array{eltype(trial_image)}(undef, height, width, ntimepoints)
+    read_images!(ntimepoints, stack, file_path, filenames)
+    stack = Float64.(stack)
+    normalized_stack = similar(stack)
+    preprocess_noreg!(stack, normalized_stack, blockDiameter, sig)
+    masks = zeros(Bool, size(stack))
+    compute_mask!(normalized_stack, masks, fixed_thresh, ntimepoints)
+    overlay = zeros(RGB{N0f8}, size(stack)...)
+    return mask_overlay(stack, masks, overlay)
+end
+
+function image_test(file_path, filename, fixed_thresh, blockDiameter, sig)
+    image = TiffImages.load(joinpath(file_path, filename))
+    image_copy = copy(image)
+    image_normalized = normalize_local_contrast(image, image_copy, blockDiameter)
+    image_normalized = imfilter(image_normalized, Kernel.gaussian(sig))
+    mask = image_normalized .> fixed_thresh
+    overlay = zeros(RGB{N0f8}, size(image)...)
+    return mask_overlay(Float64.(image), mask, overlay)  
+end
 
 function phase_offset(source::AbstractArray, target::AbstractArray; kwargs...)
     plan = plan_fft(source)
