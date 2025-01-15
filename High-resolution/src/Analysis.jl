@@ -64,8 +64,8 @@ end
 =#
 
 function main()
-    images_path = "/mnt/f/Brightfield_paper/"
-    numerical_data_path = "/mnt/f/Brightfield_paper/Data/"
+    images_path = "/mnt/e/Brightfield_paper/"
+    numerical_data_path = "/mnt/e/Brightfield_paper/Data/"
     cell_threshold = 0.029
 	xy_res = 0.065 
     z_res = 0.3
@@ -81,21 +81,24 @@ function main()
         otsu_thresh = find_threshold(zstack, Otsu())
         crop_mask = zstack .> max(zstack_thresh, otsu_thresh) 
         thickness = 0
-        mask = Array{Gray{Bool}, 3}(undef, size(image))
+        #mask = Array{Gray{Bool}, 3}(undef, size(image))
         for i in 1:slices
             @views slice_ = image[:, :, i]
             otsu_thresh = find_threshold(slice_, Otsu())
             if i == 1 
                 cell_threshold = (otsu_thresh/0.0477)*0.029 
             end
-            mask[:,:,i] = crop_mask .* (slice_ .> max(otsu_thresh, cell_threshold))
-            @views thickness += sum(mask[:,:,i]) 
+            #mask[:,:,i] = crop_mask .* (slice_ .> max(otsu_thresh, cell_threshold))
+            @views thickness += sum(crop_mask .* (slice_ .> max(otsu_thresh, cell_threshold))) #sum(mask[:,:,i]) 
         end
-        #imshow(crop_mask) 
         thickness *= (z_xy_ratio*xy_res/(height*width))
         push!(thicknesses, thickness)
         @show thicknesses 
-        imshow(mask)
+        #imshow(mask)
+        image = nothing
+        #mask = nothing
+        zstack = nothing
+        crop_mask = nothing
     end
 	data = Dict(zip(files, thicknesses))
     CSV.write("../../Data/high_res_data.csv", data)

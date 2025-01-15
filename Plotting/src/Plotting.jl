@@ -8,18 +8,65 @@ using StatsBase
 using DataFrames
 CairoMakie.activate!(type="svg")
 
-function fig1B!(Vc_biovolumes, Vc_biomasses, Pa_biovolumes, Pa_biomasses, Sp_biovolumes, Sp_biomasses)
+function extract_float(gray_string::String)
+    m = match(r"Gray\{Float64\}\(([-+]?\d*\.?\d+(?:[eE][-+]?\d+)?)\)", gray_string)
+    if m !== nothing
+        return parse(Float64, m.captures[1])
+    else
+        error("Invalid Gray{Float64} string format: $gray_string")
+    end
+end
+
+
+function fig1B!(vols, vc_mass, pf_mass, sp_mass)
     # Biovolume (x-axis) vs. brightfield biomass (y-axis)
-    # 3 panels: V.c., P.a., S.p.
     # Scatter + best-fit
-    Vc_mass_averages = [mean(Vc_biomasses[1:5]), mean(Vc_biomasses[6:10]), mean(Vc_biomasses[11:15]), 
-                        mean(Vc_biomasses[16:20]), mean(Vc_biomasses[21:25])]
-    Pa_mass_averages = 
-    Sp_mass_averages =
-    Vc_mass_stds = [std(Vc_biomasses[1:5]), std(Vc_biomasses[6:10]), std(Vc_biomasses[11:15]), 
-                    std(Vc_biomasses[16:20]), std(Vc_biomasses[21:25])]
-    Pa_mass_stds =
-    Sp_mass_stds =
+    # Data are 1D dataframes where filenames/wells are the column names
+    
+    # Ensure vols are in the correct order
+    @show vols
+
+	function map_well_identifier(file_path)
+		well_identifier = match(r"([A-Z])\d+", basename(file_path))[1][1]
+		return Dict('C' => 1, 'D' => 2, 'E' => 3, 'F' => 4, 'G' => 5)[well_identifier]
+	end
+
+	function get_condition(well)
+		if occursin(r"[17]", well)
+			return 1
+		elseif occursin(r"[28]", well)
+			return 2
+		elseif occursin(r"[39]", well)
+			return 3
+		elseif occursin(r"[410]", well)
+			return 4
+		elseif occursin(r"[511]", well)
+			return 5
+		else
+			return missing
+		end
+	end
+
+    # Get averages and stds of vc_masses, pf_masses, sp_masses (correct order)
+    vc_mass = stack(vc_mass, Not([]), variable_name = :FilePath, value_name = :Value)
+    vc_mass[!, :Well] = replace.(vc_mass.FilePath, r".*/(.*?)_.*" => s"\1")
+	vc_mass.condition = [get_condition(well) for well in vc_mass.Well]
+    grouped_values = [group.Value for group in groupby(vc_mass, :condition)]
+    data = vcat(grouped_values...)
+    vc_averages = [mean(subarray) for subarray in grouped_values] 
+    vc_stds = [std(subarray) for subarray in grouped_values]
+    
+	# Extract vpsL data from the dataframe first
+    pf_mass = stack(pf_mass, Not([]), variable_name = :FilePath, value_name = :Value)
+	pf_mass[:, :condition] = map(map_well_identifier, pf_mass.FilePath)
+    grouped_values = [group.Value for group in groupby(pf_mass, :condition)]
+	grouped_values = [map(extract_float, inner_array) for inner_array in grouped_values] 
+    data = vcat(grouped_values...)
+    pf_averages = [mean(subarray) for subarray in grouped_values] 
+    pf_stds = [std(subarray) for subarray in grouped_values]
+
+@show vc_averages
+#=
     @. model(x, p) = p[1]*x + p[2] 
 
     p0 = [(Vc_biomasses[2]-Vc_biomasses[1])/(Vc_biovolumes[2]-Vc_biovolumes[1]), Vc_biomasses[1]]
@@ -30,11 +77,12 @@ function fig1B!(Vc_biovolumes, Vc_biomasses, Pa_biovolumes, Pa_biomasses, Sp_bio
     pstar = coef(fit)
 	xbase = collect(range(minimum(x), maximum(x), 100))
 
-    fig = Figure(size=(300,300))
-    ax = Axis(fig[1, 1], xlabel="Total biofilm biovolume (µm³)", ylabel="Biofilm biomass (a.u.)")
+    fig = Figure(size=(3*72,3*72))
+    ax = Axis(fig[1, 1], xlabel="Average thickness (µm)", ylabel="Biofilm OD (a.u.)")
     scatter!(ax, Vc_biovolumes, Vc_biomasses, color=:black)
 	lines!(ax, xbase, model.(xbase, (pstar,)), color="black")
-    save("fig1B_Vc.svg", fig)
+    save("fig1B.svg", fig)
+=#
 end
 
 function fig1A_OD_image(OD_image_path)
@@ -169,19 +217,28 @@ function figS2_focal_plane!(data)
 end
 
 function main()
-    path_to_sans = "/home/jojo/.fonts/cmunss.ttf"
+    path_to_sans = "/root/.fonts/cmunss.ttf"
     set_theme!(fonts = (; bold=path_to_sans, regular = path_to_sans))
     data_folder = "../../Data/"
+    vols = DataFrame(CSV.File(joinpath(data_folder, "high_res_data.csv")))
+    vc_mass_path = "/mnt/e/Brightfield_paper/vc_fig1B/4x/Numerical data/biomass.csv"
+    pf_mass_path = "/mnt/e/Brightfield_paper/pf_fig1B/4x/Numerical data/biomass.csv"
+    #sp_mass_path = "/mnt/e/Brightfield_paper/sp_fig1B/4x/Numerical data/biomass.csv"
+    vc_mass = DataFrame(CSV.File(vc_mass_path))
+    pf_mass = DataFrame(CSV.File(pf_mass_path))
+    #sp_mass = DataFrame(CSV.File(sp_mass_path))
+    fig1B!(vols, vc_mass, pf_mass, nothing)
+
     #OD_image_path = "/mnt/f/Brightfield_paper/tests/OD_test.tif"
     #fig1A_OD_image(OD_image_path)  
     #fig1A_data_path = data_folder*"fig1A_lineplot.csv"
     #fig1A_lineplot!(fig1A_data_path)
-    focal_plane_path = "/mnt/f/Brightfield_paper/focal_plane/data/Numerical data/biomass.csv"
-    focal_plane_data = DataFrame(CSV.File(focal_plane_path))
-    figS2_focal_plane!(focal_plane_data)  
-    inoculum_vc_path = "/mnt/f/Brightfield_paper/inoculum/250105_4x_bf_biospa_JP_Drawer3 05-Jan-2025 16-20-13/250105_Plate 1!PLATE_ID!_/Numerical data/biomass.csv"
-    inoculum_vc_data = DataFrame(CSV.File(inoculum_vc_path))
-    fig2_Vc!(inoculum_vc_data)
+    #focal_plane_path = "/mnt/f/Brightfield_paper/focal_plane/data/Numerical data/biomass.csv"
+    #focal_plane_data = DataFrame(CSV.File(focal_plane_path))
+    #figS2_focal_plane!(focal_plane_data)  
+    #inoculum_vc_path = "/mnt/f/Brightfield_paper/inoculum/250105_4x_bf_biospa_JP_Drawer3 05-Jan-2025 16-20-13/250105_Plate 1!PLATE_ID!_/Numerical data/biomass.csv"
+    #inoculum_vc_data = DataFrame(CSV.File(inoculum_vc_path))
+    #fig2_Vc!(inoculum_vc_data)
 end
 
 main()
