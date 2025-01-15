@@ -1,13 +1,12 @@
 using Makie 
 using CairoMakie
+using SwarmMakie
 using LsqFit
 using TiffImages
 using CSV
 using StatsBase
 using DataFrames
 CairoMakie.activate!(type="svg")
-path_to_sans = "/Users/jojo/Downloads/computer-modern/cmunss.ttf"
-set_theme!(fonts = (; bold=path_to_sans, regular = path_to_sans))
 
 function fig1B!(Vc_biovolumes, Vc_biomasses, Pa_biovolumes, Pa_biomasses, Sp_biovolumes, Sp_biomasses)
     # Biovolume (x-axis) vs. brightfield biomass (y-axis)
@@ -40,11 +39,11 @@ end
 
 function fig1A_OD_image(OD_image_path)
     image = Float64.(TiffImages.load(OD_image_path))
-    fig = Figure()
-    ax = Axis(fig[1, 1])
-    hm = heatmap!(ax, image, colormap=:plasma)
-	Colorbar(fig[:, end+1], hm)
-    save("fig1A_OD_image.svg", fig)
+    fig = Figure(figure_padding = 0, fontsize=38)
+    ax = Axis(fig[1, 1], aspect = DataAspect(), yticklabelsvisible = false, xticklabelsvisible = false, yticksvisible = false, xticksvisible = false)
+    hm = heatmap!(ax, rotr90(image), colormap=:plasma)
+    Colorbar(fig[end+1, :], hm, vertical = false, flipaxis = false, label = "OD", width = Relative(0.7))
+    save("fig1A_OD_image.png", fig)
 end
 
 function fig1A_lineplot!(fig1A_data_path)
@@ -92,11 +91,97 @@ function fig1C!(Vc_biomasses, Pa_biomasses, Sp_biomasses)
     save("fig1C_Vc.svg", fig)
 end
 
+function fig2_Vc!(data)
+    # 6 inocula, 9 replicates
+    peaks = describe(data, :max)
+    peaks[!, :Well] = replace.(string.(peaks.variable), r".*/(.*?)_.*" => s"\1")
+
+	function get_condition(well)
+		if occursin(r"[17]", well)
+			return 1
+		elseif occursin(r"[28]", well)
+			return 2
+		elseif occursin(r"[39]", well)
+			return 3
+		elseif occursin(r"[410]", well)
+			return 4
+		elseif occursin(r"[511]", well)
+			return 5
+		elseif occursin(r"[612]", well)
+			return 6
+		else
+			return missing
+		end
+	end
+
+	# Add the new column "condition" to the DataFrame
+	peaks.condition = [get_condition(well) for well in peaks.Well]
+
+
+    grouped_values = [group.max for group in groupby(peaks, :condition)]
+    data = vcat(grouped_values...)
+    averages = [mean(subarray) for subarray in grouped_values] 
+    maxes = [maximum(subarray) for subarray in grouped_values] 
+    mins = [minimum(subarray) for subarray in grouped_values]
+
+    category_num = Int.(1:6)
+    category_num_swarm = Int.(repeat(1:6, inner = 9))
+    fig = Figure(size=(3*72, 2.5*72))
+    ax = Axis(fig[1, 1], xlabel="Inoculum (cells/mL)", ylabel="Peak biofilm OD (a.u.)")
+    crossbar!(ax, category_num, averages, mins, maxes;
+			  color=:white, midlinecolor=:black)
+    plt = beeswarm!(ax, category_num_swarm, Float64.(data), strokecolor=:black, color=:white, algorithm=UniformJitter(), strokewidth=1)
+    ax.xticks=(1:6, [rich("10", superscript("7")), rich("10", superscript("6")), rich("10", superscript("5")), 
+                     rich("10", superscript("4")), rich("10", superscript("3")), rich("10", superscript("2"))])
+    ax.xticklabelrotation=45
+    ax.xgridvisible = false
+    ax.ygridvisible = false
+	ax.rightspinevisible = false
+	ax.topspinevisible = false
+    save("fig2_Vc.svg", fig)
+end
+
+function figS2_focal_plane!(data)
+    # 7 focal planes, 3 replicates
+    fig = Figure(size=(3*72, 2.5*72))
+    ax = Axis(fig[1, 1], xlabel="Relative focal plane (mm)", ylabel="Biofilm OD (a.u.)")
+    data_long = stack(data, Not([]), variable_name = :FilePath, value_name = :Value)
+    data_long[!, :Well] = replace.(data_long.FilePath, r".*/(.*?)_.*" => s"\1")
+    data_long[!, :XTick] = parse.(Int, replace.(data_long.FilePath, r".*_(\d+)_.*" => s"\1"))
+    grouped_values = [group.Value for group in groupby(data_long, :XTick)]
+    data = vcat(grouped_values...)
+    averages = [mean(subarray) for subarray in grouped_values] 
+    maxes = [maximum(subarray) for subarray in grouped_values] 
+    mins = [minimum(subarray) for subarray in grouped_values]
+    category_num = Int.(1:7)
+    category_num_swarm = Int.(repeat(1:7, inner = 3))
+    crossbar!(ax, category_num, averages, mins, maxes;
+			  color=:white, midlinecolor=:black)
+    plt = beeswarm!(ax, category_num_swarm, Float64.(data), strokecolor=:black, color=:white, algorithm=UniformJitter(), strokewidth=1)
+    ax.xticks=(1:7, ["-1.62", "-1.08", "-0.54", "0", "0.54", "1.08", "1.62"])
+    ax.xticklabelrotation=45
+    ax.xgridvisible = false
+    ax.ygridvisible = false
+	ax.rightspinevisible = false
+	ax.topspinevisible = false
+    ylims!(ax, 0.0, 0.27)
+    save("figS2_focal_plane.svg", fig)
+end
+
 function main()
+    path_to_sans = "/home/jojo/.fonts/cmunss.ttf"
+    set_theme!(fonts = (; bold=path_to_sans, regular = path_to_sans))
     data_folder = "../../Data/"
     #OD_image_path = "/mnt/f/Brightfield_paper/tests/OD_test.tif"
-    fig1A_data_path = data_folder*"fig1A_lineplot.csv"
-    fig1A_lineplot!(fig1A_data_path)
+    #fig1A_OD_image(OD_image_path)  
+    #fig1A_data_path = data_folder*"fig1A_lineplot.csv"
+    #fig1A_lineplot!(fig1A_data_path)
+    focal_plane_path = "/mnt/f/Brightfield_paper/focal_plane/data/Numerical data/biomass.csv"
+    focal_plane_data = DataFrame(CSV.File(focal_plane_path))
+    figS2_focal_plane!(focal_plane_data)  
+    inoculum_vc_path = "/mnt/f/Brightfield_paper/inoculum/250105_4x_bf_biospa_JP_Drawer3 05-Jan-2025 16-20-13/250105_Plate 1!PLATE_ID!_/Numerical data/biomass.csv"
+    inoculum_vc_data = DataFrame(CSV.File(inoculum_vc_path))
+    fig2_Vc!(inoculum_vc_data)
 end
 
 main()

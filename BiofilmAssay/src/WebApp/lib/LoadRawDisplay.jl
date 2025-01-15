@@ -15,7 +15,7 @@ function load_raw_display(file_path, filenames)
     elseif ntimepoints == 1
         @views img = TiffImages.load(joinpath(file_path, filenames[1]))
     else
-        @views dummy_img = TiffImages.load(joinpath(file_path, filenames[1]); lazyio=true)
+        @views dummy_img = TiffImages.load(joinpath(file_path, filenames[1]); mmap=true)
         height, width = size(dummy_img)
         img = Array{eltype(dummy_img), 3}(undef, height, width, ntimepoints)
         filenames = sort(filenames, lt=natural)
@@ -132,12 +132,17 @@ function preprocess_noreg!(img_stack, normalized_stack, blockDiameter, sig)
 end
 
 function timelapse_test(file_path, filenames, fixed_thresh, blockDiameter, sig)
-    filenames = sort(filenames, lt=natural)
-    @views trial_image = TiffImages.load(joinpath(file_path, filenames[1]); lazyio=true)
-    height, width = size(trial_image)
-    ntimepoints = length(filenames)
-    stack = Array{eltype(trial_image)}(undef, height, width, ntimepoints)
-    read_images!(ntimepoints, stack, file_path, filenames)
+    if typeof(filenames) == String 
+        @views stack = TiffImages.load(joinpath(file_path, filenames))
+        height, width, ntimepoints = size(stack)
+    else
+        filenames = sort(filenames, lt=natural)
+        @views trial_image = TiffImages.load(joinpath(file_path, filenames[1]); mmap=true)
+        height, width = size(trial_image)
+        ntimepoints = length(filenames)
+        stack = Array{eltype(trial_image)}(undef, height, width, ntimepoints)
+        read_images!(ntimepoints, stack, file_path, filenames)
+    end
     stack = Float64.(stack)
     normalized_stack = similar(stack)
     preprocess_noreg!(stack, normalized_stack, blockDiameter, sig)

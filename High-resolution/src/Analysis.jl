@@ -70,23 +70,16 @@ function main()
 	xy_res = 0.065 
     z_res = 0.3
     z_xy_ratio = z_res / xy_res 
-    zstack_thresh = 0.4368
+    zstack_thresh = 0.5
     thicknesses = []
-    files = [f for f in readdir(images_path, join=true) if occursin(r"\.tif$", f) && (occursin("D39", f) || occursin("36", f) || occursin("Pflu", f))]
+    files = [f for f in readdir(images_path, join=true) if occursin(r"\.tif$", f) && !occursin("D39", f) && !occursin("36", f)]
     for filename in files 
         @show filename
         image = TiffImages.load(filename; lazyio=true) 
         height, width, slices = size(image)
         zstack = imfilter(dropdims(sum(image, dims=3), dims=3), Kernel.gaussian(10))
         otsu_thresh = find_threshold(zstack, Otsu())
-        if occursin("ara",filename)
-            crop_mask = zstack .> max(zstack_thresh, otsu_thresh) 
-            #@show otsu_thresh/maximum(zstack)
-        else
-            println("S. pneumo")
-            #@show otsu_thresh/maximum(zstack)
-            crop_mask = zstack .> otsu_thresh 
-        end
+        crop_mask = zstack .> max(zstack_thresh, otsu_thresh) 
         thickness = 0
         mask = Array{Gray{Bool}, 3}(undef, size(image))
         for i in 1:slices

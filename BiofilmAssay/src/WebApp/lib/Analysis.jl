@@ -262,10 +262,11 @@ function extract_base_and_ext(filename::String)
     # The batch criterion is that there is a number at the end of the filename
     matches = match(r"^(.*\D)\d+(\.[^\.]+)$", filename)
     if isnothing(matches)
-        error("Filename $filename does not satisfy batch criteria")
+        base, ext = splitext(filename)
+    else
+        base = matches.captures[1]
+        ext = matches.captures[2]
     end
-    base = matches.captures[1]
-    ext = matches.captures[2]
     return base, ext
 end
 
@@ -345,7 +346,7 @@ function analysis_main(file_path, output_path, files, dust_correction, batch_pro
     files = [f for f in files if f != Imin_path && f != Imax_path]
     for file in files
         if file ∉ analyzed
-            test_image = TiffImages.load(joinpath(file_path, file); lazyio=true)
+            test_image = TiffImages.load(joinpath(file_path, file); mmap=true)
             img_dims = size(test_image)
             if length(filter(x -> x != 1, img_dims)) == 3
                 height, width, ntimepoints = img_dims

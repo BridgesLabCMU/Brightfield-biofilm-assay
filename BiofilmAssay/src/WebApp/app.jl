@@ -3,15 +3,13 @@
 # 1. Figure out why image updates only work when switching regimes (i.e. image -> gif or gif -> image, not image -> image)
 # Reload fixes the issue, but how do I get it to do this automatically?
 # It seems to work fine in the tab that is not currently active
-# 2. figure out why 0 image doesn't work -- it's a bug, works if you click "off" the file, but not if you click clear
-# If I get rid of the mask with display raw image and then try test image again with 0 image, it reloads the mask from before...why?
-# 4. Clean up redundant code
-# 5. Test 3D tif series at all steps
-# 6. Test capacity in terms of uploads/downloads
-# 7. Delete folders after use?
+# 2. Bug with clearing selected files 
+# 3. Clean up redundant code in app.jl
+# 4. Delete folders after use?
 ##################################################
 
-using Main.utils
+using Main.Analysis
+using Main.Displays
 using GenieFramework
 using FileIO
 using TiffImages
@@ -63,6 +61,7 @@ mkpath(DISPLAYS_PATH)
     @in dust_correction = false 
     @in batch_processing = false 
     @in fixed_thresh = 0.0400
+    @in tab_selected = "Images"
     
     @in selected_raw_display_files = [""]
     @out upfiles = readdir(FILE_PATH)
@@ -77,7 +76,7 @@ mkpath(DISPLAYS_PATH)
         image_display_path = "/$DISPLAY_IMGPATH#$(Base.time())" 
         mask_display_path = "/$DISPLAY_MASKPATH#$(Base.time())"
         filter!(e -> e != "", selected_raw_display_files)
-        @private raw_image = load_raw_display(FILE_PATH, selected_raw_display_files)
+        raw_image = load_raw_display(FILE_PATH, selected_raw_display_files)
         if length(selected_raw_display_files) > 0 
             if length(selected_raw_display_files) == 1 && length(size(raw_image)) == 2
                 DISPLAY_IMGPATH = "displays/display.jpg"
@@ -112,24 +111,24 @@ mkpath(DISPLAYS_PATH)
         filter!(e -> e != "", selected_test_files)
         if length(selected_test_files) > 0 
             if length(selected_test_files) == 1
-                @private @views dummy_img = TiffImages.load(joinpath(FILE_PATH, selected_test_files[1]))
+                @views dummy_img = TiffImages.load(joinpath(FILE_PATH, selected_test_files[1]))
                 if length(size(dummy_img)) == 2
                     DISPLAY_IMGPATH = "displays/display.jpg"
                     DISPLAY_MASKPATH = "displays/mask_display.jpg"
-                    @private @views normalized, overlay = image_test(FILE_PATH, selected_test_files[1], fixed_thresh, 101, 2)
+                    @views normalized, overlay = image_test(FILE_PATH, selected_test_files[1], fixed_thresh, 101, 2)
                     FileIO.save(joinpath(@__DIR__, "public", DISPLAY_IMGPATH), normalized)
                     FileIO.save(joinpath(@__DIR__, "public", DISPLAY_MASKPATH), overlay)
                 else
                     DISPLAY_IMGPATH = "displays/display.gif"
                     DISPLAY_MASKPATH = "displays/mask_display.gif"
-                    @private normalized, overlay = timelapse_test(FILE_PATH, selected_test_files[1], fixed_thresh, 101, 2)
+                    normalized, overlay = timelapse_test(FILE_PATH, selected_test_files[1], fixed_thresh, 101, 2)
                     FileIO.save(joinpath(@__DIR__, "public", DISPLAY_IMGPATH), normalized, fps=10)
                     FileIO.save(joinpath(@__DIR__, "public", DISPLAY_MASKPATH), overlay, fps=10)
                 end
             else
                 DISPLAY_IMGPATH = "displays/display.gif"
                 DISPLAY_MASKPATH = "displays/mask_display.gif"
-                @private normalized, overlay = timelapse_test(FILE_PATH, selected_test_files, fixed_thresh, 101, 2)
+                normalized, overlay = timelapse_test(FILE_PATH, selected_test_files, fixed_thresh, 101, 2)
                 FileIO.save(joinpath(@__DIR__, "public", DISPLAY_IMGPATH), normalized, fps=10)
                 FileIO.save(joinpath(@__DIR__, "public", DISPLAY_MASKPATH), overlay, fps=10)
             end
@@ -158,8 +157,6 @@ mkpath(DISPLAYS_PATH)
         AnalyzeButtonProgress_processing = false
     end
 
-    @in tab_selected = "Images"
-    
     @out processed_images = readdir(DOWNLOADS_PATH)
     @in selected_processed_image = ""
     @in DisplayProcessedButtonProgress_process = false

@@ -12,7 +12,7 @@ row([
 	  [
 	  uploader( multiple = true,
 		  accept = ".tif, .tiff, .ome.tif, .ome.tiff",
-		  maxfilesize = 10000*10000*100, # bytes
+		  maxfilesize = 10000*10000*1000, # bytes
 		  maxfiles = 38400, # 384-well plate, 100 timepoints
 		  autoupload = true,
 		  hideuploadbtn = true,

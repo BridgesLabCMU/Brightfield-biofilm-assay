@@ -1,3 +1,4 @@
 first,second
-/mnt/f/Brightfield_paper/00125ara_5x5.ome.tif,Gray{Float64}(1.5428353312957455)
-/mnt/f/Brightfield_paper/01ara_5x5.ome.tif,Gray{Float64}(4.086608078393879)
+/mnt/f/Brightfield_paper/Pflu_nobiofilm.ome.tif,Gray{Float64}(0.02807529908528824)
+/mnt/f/Brightfield_paper/Pflu_WT.ome.tif,Gray{Float64}(0.2965280295854863)
+/mnt/f/Brightfield_paper/Pflu_wspF.ome.tif,Gray{Float64}(1.3252713111439332)
