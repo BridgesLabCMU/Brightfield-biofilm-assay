@@ -24,65 +24,82 @@ function fig1B!(vols, vc_mass, pf_mass, sp_mass)
     # Data are 1D dataframes where filenames/wells are the column names
     
     # Ensure vols are in the correct order
-    @show vols
+    substrings = ["D39", "36", "Pa"]
+	vols = filter(row -> !any(substr -> occursin(substr, row.first), substrings), vols)
+	
+	order_list = ["vpsL", "0ara", "00125ara", "0025ara", "005ara", "01ara", "Pflu_no", "Pflu_WT",
+                  "Pflu_wsp"] 
+	order_map = Dict(substring => idx for (idx, substring) in enumerate(order_list))
+	vols.order = [order_map[substring] for row in eachrow(vols) for substring in order_list if occursin(substring, row.first)]
+	vols = sort(vols, :order)
+	select!(vols, Not(:order))
 
 	function map_well_identifier(file_path)
 		well_identifier = match(r"([A-Z])\d+", basename(file_path))[1][1]
-		return Dict('C' => 1, 'D' => 2, 'E' => 3, 'F' => 4, 'G' => 5)[well_identifier]
+		return Dict('A' => 1, 'B' => 2, 'C' => 3, 'D' => 4, 'E' => 5, 'F' => 6, 
+                   'G' => 7, 'H' => 8)[well_identifier]
 	end
 
 	function get_condition(well)
-		if occursin(r"[17]", well)
+		if occursin("3", well)
 			return 1
-		elseif occursin(r"[28]", well)
+		elseif occursin("4", well)
 			return 2
-		elseif occursin(r"[39]", well)
+		elseif occursin("5", well)
 			return 3
-		elseif occursin(r"[410]", well)
-			return 4
-		elseif occursin(r"[511]", well)
-			return 5
+		elseif occursin("9", well)
+			return 4 
 		else
 			return missing
 		end
 	end
 
     # Get averages and stds of vc_masses, pf_masses, sp_masses (correct order)
-    vc_mass = stack(vc_mass, Not([]), variable_name = :FilePath, value_name = :Value)
-    vc_mass[!, :Well] = replace.(vc_mass.FilePath, r".*/(.*?)_.*" => s"\1")
-	vc_mass.condition = [get_condition(well) for well in vc_mass.Well]
-    grouped_values = [group.Value for group in groupby(vc_mass, :condition)]
-    data = vcat(grouped_values...)
-    vc_averages = [mean(subarray) for subarray in grouped_values] 
-    vc_stds = [std(subarray) for subarray in grouped_values]
-    
-	# Extract vpsL data from the dataframe first
     pf_mass = stack(pf_mass, Not([]), variable_name = :FilePath, value_name = :Value)
-	pf_mass[:, :condition] = map(map_well_identifier, pf_mass.FilePath)
+    pf_mass[!, :Well] = replace.(pf_mass.FilePath, r".*/(.*?)_.*" => s"\1")
+	pf_mass.condition = [get_condition(well) for well in pf_mass.Well]
     grouped_values = [group.Value for group in groupby(pf_mass, :condition)]
 	grouped_values = [map(extract_float, inner_array) for inner_array in grouped_values] 
+    vpsL = grouped_values[4]
+    deleteat!(grouped_values, 4)
     data = vcat(grouped_values...)
     pf_averages = [mean(subarray) for subarray in grouped_values] 
     pf_stds = [std(subarray) for subarray in grouped_values]
+    
+    vc_mass = stack(vc_mass, Not([]), variable_name = :FilePath, value_name = :Value)
+    vc_mass[!, :Well] = replace.(vc_mass.FilePath, r".*/(.*?)_.*" => s"\1")
+	vc_mass[:, :condition] = map(map_well_identifier, vc_mass.FilePath)
+    # Drop rows where condition = 6, 7, 8
+    vc_mass = vc_mass[(vc_mass.condition .!= 6) .& (vc_mass.condition .!= 7) .& (vc_mass.condition .!= 8), :]
+    grouped_values = [group.Value for group in groupby(vc_mass, :condition)]
+    data = vcat(grouped_values..., vpsL)
+    vc_averages = [mean(subarray) for subarray in grouped_values] 
+    vc_stds = [std(subarray) for subarray in grouped_values]
+    pushfirst!(vc_averages, mean(vpsL))
+    pushfirst!(vc_stds, std(vpsL))
 
-@show vc_averages
-#=
     @. model(x, p) = p[1]*x + p[2] 
 
-    p0 = [(Vc_biomasses[2]-Vc_biomasses[1])/(Vc_biovolumes[2]-Vc_biovolumes[1]), Vc_biomasses[1]]
+    p0 = [(vc_averages[2]-vc_averages[1])/(vols[2,2]-vols[1,2]), vc_averages[1]]
     lb = [0.0, 0.0]
     ub = [Inf, Inf]
 
-    fit = curve_fit(model, x, y, p0, lower=lb, upper=ub)
+    mass_avg = vcat(vc_averages, pf_averages)
+    fit = curve_fit(model, mass_avg, vols.second, p0, lower=lb, upper=ub)
     pstar = coef(fit)
-	xbase = collect(range(minimum(x), maximum(x), 100))
+	xbase = collect(range(minimum(vc_averages), maximum(vc_averages), 100))
 
-    fig = Figure(size=(3*72,3*72))
-    ax = Axis(fig[1, 1], xlabel="Average thickness (µm)", ylabel="Biofilm OD (a.u.)")
-    scatter!(ax, Vc_biovolumes, Vc_biomasses, color=:black)
+    fig = Figure(size=(5*72,3*72))
+    ax = Axis(fig[1, 1], xlabel="Biofilm OD (a.u.)", ylabel="Average thickness (µm)")
+    errorbars!(ax, vc_averages, vols.second[1:6], vc_stds, color=Makie.wong_colors()[1], direction = :x)
+    errorbars!(ax, pf_averages, vols.second[7:9], pf_stds, color=Makie.wong_colors()[2], direction = :x)
+    scatter!(ax, vc_averages, vols.second[1:6], color=Makie.wong_colors()[1], label=rich("V. cholerae"; font=:italic))
+    scatter!(ax, pf_averages, vols.second[7:9], color=Makie.wong_colors()[2], label=rich("P. fluorescens"; font=:italic))
 	lines!(ax, xbase, model.(xbase, (pstar,)), color="black")
+	ax.rightspinevisible = false
+	ax.topspinevisible = false
+    fig[1,2] = Legend(fig, ax, merge = true, unique = true, framevisible=false, labelsize=12, rowgap=0)
     save("fig1B.svg", fig)
-=#
 end
 
 function fig1A_OD_image(OD_image_path)
@@ -218,7 +235,8 @@ end
 
 function main()
     path_to_sans = "/root/.fonts/cmunss.ttf"
-    set_theme!(fonts = (; bold=path_to_sans, regular = path_to_sans))
+    path_to_sans_ital = "/root/.fonts/cmunsi.ttf"
+    set_theme!(fonts = (; bold=path_to_sans, regular = path_to_sans, italic = path_to_sans_ital))
     data_folder = "../../Data/"
     vols = DataFrame(CSV.File(joinpath(data_folder, "high_res_data.csv")))
     vc_mass_path = "/mnt/e/Brightfield_paper/vc_fig1B/4x/Numerical data/biomass.csv"
