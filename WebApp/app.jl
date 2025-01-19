@@ -10,6 +10,7 @@
 
 using Main.Analysis
 using Main.Displays
+using Main.utils
 using GenieFramework
 using FileIO
 using TiffImages
@@ -18,7 +19,19 @@ using TiffImages
 const FILE_PATH = joinpath("public", "uploads")
 const DOWNLOADS_PATH = joinpath("public", "downloads")
 const DISPLAYS_PATH = joinpath("public", "displays")
-const DOWNLOADS_ZIP = joinpath("public", "data.zip")
+const DOWNLOADS_ZIP = joinpath("public", "downloads.zip")
+if isdir(FILE_PATH)
+    rm(FILE_PATH, recursive=true)
+end
+if isdir(DOWNLOADS_PATH)
+    rm(DOWNLOADS_PATH, recursive=true)
+end
+if isdir(DISPLAYS_PATH)
+    rm(DISPLAYS_PATH, recursive=true)
+end
+if isfile(DOWNLOADS_ZIP)
+    rm(DOWNLOADS_ZIP)
+end
 mkpath(FILE_PATH)
 mkpath(DOWNLOADS_PATH)
 mkpath(DISPLAYS_PATH)
@@ -27,6 +40,7 @@ mkpath(DISPLAYS_PATH)
     # Uploads 
     ##############################
     @out upfiles = readdir(FILE_PATH)
+    @out zipped_files = [f for f in readdir(FILE_PATH) if occursin(".zip", f)]
     @onchange fileuploads begin
         if ! isempty(fileuploads)
             @info "File was uploaded: " fileuploads
@@ -43,6 +57,7 @@ mkpath(DISPLAYS_PATH)
             fileuploads = Dict{AbstractString,AbstractString}()
         end
         upfiles = readdir(FILE_PATH)
+        zipped_files = [f for f in readdir(FILE_PATH) if occursin(".zip", f)]
     end
     @event uploaded begin
         @info "uploaded"
@@ -56,27 +71,44 @@ mkpath(DISPLAYS_PATH)
     ##############################
     # Main
     ##############################
+    @in analyze_folder = ""
+    @in ConfirmButton_process = false
+    @out ConfirmButton_processing = false
+    @out analyze_folder_files = [""]
+    @out folder = ""
+    @onbutton ConfirmButton_process begin
+        ConfirmButton_processing = true 
+        folder = joinpath(FILE_PATH, splitext(analyze_folder)[1])
+        if !isdir(folder)
+            unzip_folder(joinpath(FILE_PATH, analyze_folder))
+            mkpath(joinpath(DOWNLOADS_PATH, basename(folder)))
+        end
+        analyze_folder_files = readdir(joinpath(FILE_PATH, splitext(analyze_folder)[1]))
+        ConfirmButton_processing = false 
+    end
+
     @in selected_Imin = ""
     @in selected_Imax = ""
     @in dust_correction = false 
-    @in batch_processing = false 
+    @in batch_processing = false
+    @in timelapse_flag = false 
     @in fixed_thresh = 0.0400
     @in tab_selected = "Images"
     
     @in selected_raw_display_files = [""]
-    @out upfiles = readdir(FILE_PATH)
     @in DisplayRawButtonProgress_process = false
     @out DisplayRawButtonProgress_processing = false
     @out image_display_path = ""
     @out mask_display_path = ""
     @onbutton DisplayRawButtonProgress_process begin
         DisplayRawButtonProgress_processing = true 
+        folder = joinpath(FILE_PATH, splitext(analyze_folder)[1])
         DISPLAY_IMGPATH = ""
         DISPLAY_MASKPATH = ""
         image_display_path = "/$DISPLAY_IMGPATH#$(Base.time())" 
         mask_display_path = "/$DISPLAY_MASKPATH#$(Base.time())"
         filter!(e -> e != "", selected_raw_display_files)
-        raw_image = load_raw_display(FILE_PATH, selected_raw_display_files)
+        raw_image = load_raw_display(folder, selected_raw_display_files)
         if length(selected_raw_display_files) > 0 
             if length(selected_raw_display_files) == 1 && length(size(raw_image)) == 2
                 DISPLAY_IMGPATH = "displays/display.jpg"
@@ -99,7 +131,6 @@ mkpath(DISPLAYS_PATH)
     end
     
     @in selected_test_files = [""]
-    @out upfiles = readdir(FILE_PATH)
     @in TestButtonProgress_process = false
     @out TestButtonProgress_processing = false
     @onbutton TestButtonProgress_process begin
@@ -111,24 +142,24 @@ mkpath(DISPLAYS_PATH)
         filter!(e -> e != "", selected_test_files)
         if length(selected_test_files) > 0 
             if length(selected_test_files) == 1
-                @views dummy_img = TiffImages.load(joinpath(FILE_PATH, selected_test_files[1]))
+                @views dummy_img = TiffImages.load(joinpath(folder, selected_test_files[1]))
                 if length(size(dummy_img)) == 2
                     DISPLAY_IMGPATH = "displays/display.jpg"
                     DISPLAY_MASKPATH = "displays/mask_display.jpg"
-                    @views normalized, overlay = image_test(FILE_PATH, selected_test_files[1], fixed_thresh, 101, 2)
+                    @views normalized, overlay = image_test(folder, selected_test_files[1], fixed_thresh, 101, 2)
                     FileIO.save(joinpath(@__DIR__, "public", DISPLAY_IMGPATH), normalized)
                     FileIO.save(joinpath(@__DIR__, "public", DISPLAY_MASKPATH), overlay)
                 else
                     DISPLAY_IMGPATH = "displays/display.gif"
                     DISPLAY_MASKPATH = "displays/mask_display.gif"
-                    normalized, overlay = timelapse_test(FILE_PATH, selected_test_files[1], fixed_thresh, 101, 2)
+                    normalized, overlay = timelapse_test(folder, selected_test_files[1], fixed_thresh, 101, 2)
                     FileIO.save(joinpath(@__DIR__, "public", DISPLAY_IMGPATH), normalized, fps=10)
                     FileIO.save(joinpath(@__DIR__, "public", DISPLAY_MASKPATH), overlay, fps=10)
                 end
             else
                 DISPLAY_IMGPATH = "displays/display.gif"
                 DISPLAY_MASKPATH = "displays/mask_display.gif"
-                normalized, overlay = timelapse_test(FILE_PATH, selected_test_files, fixed_thresh, 101, 2)
+                normalized, overlay = timelapse_test(folder, selected_test_files, fixed_thresh, 101, 2)
                 FileIO.save(joinpath(@__DIR__, "public", DISPLAY_IMGPATH), normalized, fps=10)
                 FileIO.save(joinpath(@__DIR__, "public", DISPLAY_MASKPATH), overlay, fps=10)
             end
@@ -150,14 +181,35 @@ mkpath(DISPLAYS_PATH)
     @out processed_images = readdir(DOWNLOADS_PATH)
     @onbutton AnalyzeButtonProgress_process begin
         AnalyzeButtonProgress_processing = true
-        analysis_main(FILE_PATH, DOWNLOADS_PATH, upfiles, dust_correction, batch_processing, fixed_thresh, selected_Imin, selected_Imax)
+        zipped_files = [f for f in readdir(FILE_PATH) if occursin("zip", f)]
+        if batch_processing == true
+            for zipped_file in zipped_files
+                check_folder = joinpath(FILE_PATH, splitext(zipped_file)[1])
+                if !isdir(check_folder)
+                    unzip_folder(joinpath(FILE_PATH, zipped_file))
+                    mkpath(joinpath(DOWNLOADS_PATH, basename(check_folder)))
+                end
+            end
+            folders = [f for f in readdir(FILE_PATH, join=true) if !occursin("zip", f)]
+            for f in folders
+                analysis_main(f, joinpath(DOWNLOADS_PATH, basename(f)), readdir(f), dust_correction, timelapse_flag, fixed_thresh, selected_Imin, selected_Imax)
+            end
+        else
+            if length(zipped_files) == 1  
+                check_folder = joinpath(FILE_PATH, splitext(zipped_files[1])[1])
+                if !isdir(check_folder)
+                    unzip_folder(joinpath(FILE_PATH, zipped_file))
+                    mkpath(joinpath(DOWNLOADS_PATH, basename(check_folder)))
+                end
+            end
+            analysis_main(folder, joinpath(DOWNLOADS_PATH, basename(folder)), analyze_folder_files, dust_correction, timelapse_flag, fixed_thresh, selected_Imin, selected_Imax)
+        end
         # Create a zipped version of the downloads folder
-        run(`zip -r $DOWNLOADS_ZIP $DOWNLOADS_PATH`)
-        processed_images = readdir(DOWNLOADS_PATH)
+        write_zip(DOWNLOADS_ZIP, DOWNLOADS_PATH)
+        processed_images = readdir(joinpath(DOWNLOADS_PATH, basename(folder)))
         AnalyzeButtonProgress_processing = false
     end
 
-    @out processed_images = readdir(DOWNLOADS_PATH)
     @in selected_processed_image = ""
     @in DisplayProcessedButtonProgress_process = false
     @out DisplayProcessedButtonProgress_processing = false
@@ -168,7 +220,7 @@ mkpath(DISPLAYS_PATH)
         image_display_path = "/$DISPLAY_IMGPATH#$(Base.time())"
         mask_display_path = "/$DISPLAY_MASKPATH#$(Base.time())"
         filter!(e -> e != "", selected_raw_display_files)
-        processed_image, overlay = load_processed_display(DOWNLOADS_PATH, selected_processed_image)
+        processed_image, overlay = load_processed_display(joinpath(DOWNLOADS_PATH, basename(folder)), selected_processed_image)
         if selected_processed_image != "" 
             if length(size(processed_image)) == 2
                 DISPLAY_IMGPATH = "displays/display.jpg"
@@ -195,6 +247,32 @@ mkpath(DISPLAYS_PATH)
         end
         selected_processed_image = ""
         DisplayProcessedButtonProgress_processing = false
+    end
+    
+    @in CleanupButtonProgress_process = false
+    @out CleanupButtonProgress_processing = false
+    @onbutton CleanupButtonProgress_process begin
+        CleanupButtonProgress_processing = true 
+        if isdir(FILE_PATH)
+            rm(FILE_PATH, recursive=true)
+            mkpath(FILE_PATH)
+        end
+        if isdir(DOWNLOADS_PATH)
+            rm(DOWNLOADS_PATH, recursive=true)
+            mkpath(DOWNLOADS_PATH)
+        end
+        if isdir(DISPLAYS_PATH)
+            rm(DISPLAYS_PATH, recursive=true)
+            mkpath(DISPLAYS_PATH)
+        end
+        if isfile(DOWNLOADS_ZIP)
+            rm(DOWNLOADS_ZIP)
+        end
+        CleanupButtonProgress_processing = false 
+        empty!(zipped_files)
+        empty!(analyze_folder_files)
+        analyze_folder = ""
+        empty!(processed_images)
     end
 end
 
