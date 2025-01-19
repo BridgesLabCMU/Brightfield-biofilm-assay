@@ -8,6 +8,9 @@
 # 4. Delete folders after use?
 ##################################################
 
+using Pkg
+Pkg.activate(@__DIR__)
+
 using Main.Analysis
 using Main.Displays
 using Main.utils
