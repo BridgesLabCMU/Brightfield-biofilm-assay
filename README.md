@@ -10,14 +10,14 @@ Install Julia from the following link: https://julialang.org/downloads/
 `cd` into the project directory in terminal (e.g., `cd /Downloads/Brightfield-biofilm-assay/WebApp`) then run:
 
 ```bash
-$> using Pkg; Pkg.activate("."); Pkg.instantiate()
+$> julia
+`````
+
+```julia
+julia> using Pkg; Pkg.activate("."); Pkg.instantiate()
 `````
 
 Then run the app
-
-```bash
-$> julia
-`````
 
 ```julia
 julia> using GenieFramework
