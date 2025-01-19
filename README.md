@@ -4,6 +4,7 @@ Code for analyzing biofilms by bright-field microscopy
 # Using the web app
 ## First time:
 Install Julia from the following link: https://julialang.org/downloads/
+## Usage
 
 `cd` into the project directory then run:
 
@@ -23,12 +24,8 @@ julia> Genie.loadapp() # load app
 julia> up() # start server
 `````
 
-## Usage
-
 Open your browser and navigate to `http://localhost:8000/`
-````
-````
-````
+
 ## Inside the web app:
 To upload, zip all images together with the *.zip extension. Select uploads by pressing "+". After upload, select which zipped file you would like to unzip for selecting Imin/Imax and for display. This is not strictly necessary if you don't have Imin/Imax, don't want to display raw images or test thresholding, and want to apply the same settings to all images. Select your Imin and Imax files from the options (if applicable). Optionally choose raw images to display (one image, unless
 several images comprise a timelapse, in which case the files have to satisfy the naming convention "...int.tif"), where "int" is an integer. Change threshold using the slider. Default threshold value is 0.04, which we find works well in almost all cases. Choose images to test the threshold (optional). Same options as apply to the raw image display. If satisfied with the threshold, optionally select checkboxes. "Perform dust correction" is only applicable to timelapses for which
