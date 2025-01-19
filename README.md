@@ -3,7 +3,7 @@ Code for analyzing biofilms by bright-field microscopy
 
 # Using the web app
 ## First time:
-Install Julia from the following link: https://julialang.org/downloads/
+Install Julia from the following link: https://julialang.org/downloads/ and download this respository.
 
 ## General Usage
 
