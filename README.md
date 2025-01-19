@@ -20,12 +20,10 @@ julia> using Pkg; Pkg.activate("."); Pkg.instantiate()
 Then run the app
 
 ```julia
-julia> using GenieFramework
-julia> Genie.loadapp() # load app
-julia> up() # start server
+julia> using GenieFramework; Genie.loadapp(); up()
 `````
 
-Open your browser and navigate to `http://localhost:8000/`. Sometimes `http://localhost:8000/?fake=true` is necessary.
+Open your browser and navigate to `http://localhost:8000/`. Sometimes `http://localhost:8000/?fake=true` is necessary if running the app through WSL.
 
 # Inside the web app:
 To upload, zip all images together with the *.zip extension. Select uploads by pressing "+". After upload, select which zipped file you would like to unzip for selecting Imin/Imax and for display. This is not strictly necessary if you don't have Imin/Imax, don't want to display raw images or test thresholding, and want to apply the same settings to all images. Select your Imin and Imax files from the options (if applicable). Optionally choose raw images to display (one image, unless
@@ -33,6 +31,12 @@ several images comprise a timelapse, in which case the files have to satisfy the
 the first timepoint is effectively a dust-only image; that is, the cell density is sufficiently low that cells will not be considered dust. "Timelapse format" indicates that individual files are individual timepoints in a timelapse -- the criterion for which is described above. "Analyze all folders" means that you would like to use the same Imin/Imax (if relevant) and threshold to analyze all folders (zipped files) in batch mode. If this option is not selected, the zipped file that
 was selected for settings calibration will be analyzed. Click "run analysis" to perform the analysis. Once this is finished, optionally display processed images/masks. At this stage, only single file selection is possible, because all timelapses have been aggregated into tif series. Finally, download processed images and numerical data (a zipped file containing these). Once done with the session, click the red button at the bottom, which will delete all uploads, display files,
 and processed files from the WebApp directory.
+
+# Once done with the app:
+Run:
+```julia
+julia> down(); exit()
+`````
 
 # Known bugs:
 The active tab for display "IMAGES" or "MASKS" will only update upon web page reload. Need to figure out how to auto-refresh.
