@@ -1,0 +1,11 @@
+┌ Info: 2025-01-25 10:00:40 Watching ["/Users/jojo/Downloads/Brightfield-biofilm-assay/WebApp"]
+└ @ GenieAutoReload /Users/jojo/.julia/packages/GenieAutoReload/qpImd/src/GenieAutoReload.jl:19
+┌ Info: 2025-01-25 10:00:41 Autoreloading
+└ @ GenieAutoReload /Users/jojo/.julia/packages/GenieAutoReload/qpImd/src/GenieAutoReload.jl:22
+┌ Info: 2025-01-25 10:00:42 
+│ Web Server starting at http://127.0.0.1:8000 
+└ @ Genie.Server /Users/jojo/.julia/packages/Genie/TKJWe/src/Server.jl:182
+┌ Info: 2025-01-25 10:00:42 Listening on: 127.0.0.1:8000, thread id: 1
+└ @ HTTP.Servers /Users/jojo/.julia/packages/HTTP/4AUPl/src/Servers.jl:382
+┌ Info: 2025-01-25 10:02:20 Server on 127.0.0.1:8000 closing
+└ @ HTTP.Servers /Users/jojo/.julia/packages/HTTP/4AUPl/src/Servers.jl:409

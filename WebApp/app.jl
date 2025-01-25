@@ -95,7 +95,7 @@ mkpath(DISPLAYS_PATH)
     @in dust_correction = false 
     @in batch_processing = false
     @in timelapse_flag = false 
-    @in fixed_thresh = 0.0400
+    @in fixed_thresh = 0.040000
     @in tab_selected = "Images"
     
     @in selected_raw_display_files = [""]
