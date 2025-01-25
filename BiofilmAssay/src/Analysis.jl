@@ -241,14 +241,19 @@ function output_images!(stack, masks, overlay, OD_images, dir, filename)
     end
 end
 
-function extract_base_and_ext(filename::String)
+function extract_base_and_ext(filename::String, batch)
     # The batch criterion is that there is a number at the end of the filename
-    matches = match(r"^(.*\D)\d+(\.[^\.]+)$", filename)
-    if isnothing(matches)
-        error("Filename $filename does not satisfy batch criteria")
+    if batch == "True"
+        matches = match(r"^(.*\D)\d+(\.[^\.]+)$", filename)
+        if isnothing(matches)
+            base, ext = splitext(filename)
+        else
+            base = matches.captures[1]
+            ext = matches.captures[2]
+        end
+    else
+        base, ext = splitext(filename)
     end
-    base = matches.captures[1]
-    ext = matches.captures[2]
     return base, ext
 end
 
@@ -273,11 +278,11 @@ function timelapse_processing(images, blockDiameter, ntimepoints, shift_thresh, 
             else
                 OD_images[:,:,t] = @views (-1 .* log10.((images[:,:,t] .- Imin) ./ (images[:,:,1] .- Imin)))
             end
-            @inbounds biomasses[t] = @views mean(OD_images[:,:,t] .* masks[:,:,t])
+            @inbounds biomasses[t] = @views Float64(mean(OD_images[:,:,t] .* masks[:,:,t]))
         end
     else
         for t in 1:ntimepoints
-            @inbounds biomasses[t] = @views mean((1 .- images[:,:,t]) .* masks[:,:,t])
+            @inbounds biomasses[t] = @views Float64(mean((1 .- images[:,:,t]) .* masks[:,:,t]))
         end
     end
     output_images!(images, masks, overlay, OD_images, dir, filename)
@@ -297,9 +302,9 @@ function image_processing(image, blockDiameter, fixed_thresh, sig, dir, filename
     if Imin != nothing && Imax != nothing
         OD_image = Array{Gray{Float32}, 2}(undef, size(image))
         OD_image .= (-1 .* log10.((image .- Imin) ./ (Imax .- Imin)))
-        biomass = mean(OD_image .* mask)
+        biomass = Float64(mean(OD_image .* mask))
     else
-        biomass = mean((1 .- image) .* mask)
+        biomass = Float64(mean((1 .- image) .* mask))
     end
     output_images!(image, mask, overlay, OD_image, dir, filename)
     return biomass
@@ -350,7 +355,7 @@ function analysis_main()
                 if length(filter(x -> x != 1, img_dims)) == 3
                     height, width, ntimepoints = img_dims
                     images = load(file)
-                    target_base, target_ext = extract_base_and_ext(file)
+                    target_base, target_ext = extract_base_and_ext(file, batch)
                     push!(columns, target_base)
                     push!(biomass_data, timelapse_processing(images, 
                                                              blockDiameter,
@@ -362,9 +367,9 @@ function analysis_main()
                                                              dir, target_base, Imin, Imax))
                     push!(analyzed, file)
                 elseif length(filter(x -> x != 1, img_dims)) == 2
-                    target_base, target_ext = extract_base_and_ext(file)
+                    target_base, target_ext = extract_base_and_ext(file, batch)
                     matching_files = filter(file_name -> begin
-                        base, ext = extract_base_and_ext(file_name)
+                        base, ext = extract_base_and_ext(file_name, batch)
                         base == target_base && ext == target_ext
                     end, files)
                     push!(columns, target_base)

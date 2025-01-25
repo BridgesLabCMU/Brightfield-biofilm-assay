@@ -276,6 +276,8 @@ mkpath(DISPLAYS_PATH)
         empty!(analyze_folder_files)
         analyze_folder = ""
         empty!(processed_images)
+        selected_Imin = ""
+        selected_Imax= ""
     end
 end
 
