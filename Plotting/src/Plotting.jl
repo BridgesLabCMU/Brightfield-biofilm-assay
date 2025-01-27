@@ -44,7 +44,7 @@ function fig1A_lineplot!(fig1A_data_path)
     save("fig1A_lineplot.svg", fig)
 end
 
-function fig1B!(vols, vc_mass, pa_pf_mass,sp_mass)
+function fig1B!(vols, vc_mass, pa_pf_mass, pf_wspf_mass, sp_mass)
     # Biovolume (x-axis) vs. brightfield biomass (y-axis)
     # Scatter + best-fit
     # Data are 1D dataframes where filenames/wells are the column names
@@ -85,8 +85,8 @@ function fig1B!(vols, vc_mass, pa_pf_mass,sp_mass)
     pa_pf_stds = [std(subarray) for subarray in grouped_values]
     pa_stds = pa_pf_stds[1:2]
     pa_averages = pa_pf_averages[1:2]
-    pf_stds = [pa_pf_stds[4], pa_pf_stds[3]]
-    pf_averages = [pa_pf_averages[4], pa_pf_averages[3]]
+    pf_stds = [pa_pf_stds[4], pa_pf_stds[3], std(pf_wspf_mass[1,:])]
+    pf_averages = [pa_pf_averages[4], pa_pf_averages[3], mean(pf_wspf_mass[1,:])]
     
     vc_mass = stack(vc_mass, Not([]), variable_name = :FilePath, value_name = :Value)
     vc_mass[!, :Well] = replace.(vc_mass.FilePath, r".*/(.*?)_.*" => s"\1")
@@ -103,7 +103,7 @@ function fig1B!(vols, vc_mass, pa_pf_mass,sp_mass)
 
     mass_avg = vcat(vc_averages, pf_averages, pa_averages)
     stds = vcat(vc_stds, pf_stds, pa_stds)
-    vols = vols[[!occursin("Pf_wspF", str) for str in vols.first], :]
+    #vols = vols[[!occursin("Pf_wspF", str) for str in vols.first], :]
     col2 = vols.second
     vols_avg = [mean(col2[i:i+2]) for i in 1:3:length(col2) if i+2 <= length(col2)]
     vols_std = [std(col2[i:i+2]) for i in 1:3:length(col2) if i+2 <= length(col2)]
@@ -113,18 +113,17 @@ function fig1B!(vols, vc_mass, pa_pf_mass,sp_mass)
     @show fitlinear(mass_avg,vols_avg)
 
 	xbase = collect(range(minimum(vc_averages), maximum(vc_averages), 100))
-
     fig = Figure(size=(6*72,3*72))
     ax = Axis(fig[1, 1], xlabel="BF-biofilm biomass (a.u.)", ylabel="CF-biofilm biomass (μm³)")
     errorbars!(ax, vc_averages, vols_avg[1:6], vc_stds, color=Makie.wong_colors()[1], direction = :x)
-    errorbars!(ax, pf_averages, vols_avg[7:8], pf_stds, color=Makie.wong_colors()[2], direction = :x)
-    errorbars!(ax, pa_averages, vols_avg[9:10], pa_stds, color=Makie.wong_colors()[3], direction = :x)
+    errorbars!(ax, pf_averages, vols_avg[7:9], pf_stds, color=Makie.wong_colors()[2], direction = :x)
+    errorbars!(ax, pa_averages, vols_avg[10:11], pa_stds, color=Makie.wong_colors()[3], direction = :x)
     errorbars!(ax, vc_averages, vols_avg[1:6], vols_std[1:6], color=Makie.wong_colors()[1], direction = :y)
-    errorbars!(ax, pf_averages, vols_avg[7:8], vols_std[7:8], color=Makie.wong_colors()[2], direction = :y)
-    errorbars!(ax, pa_averages, vols_avg[9:10], vols_std[9:10], color=Makie.wong_colors()[3], direction = :y)
+    errorbars!(ax, pf_averages, vols_avg[7:9], vols_std[7:9], color=Makie.wong_colors()[2], direction = :y)
+    errorbars!(ax, pa_averages, vols_avg[10:11], vols_std[10:11], color=Makie.wong_colors()[3], direction = :y)
     scatter!(ax, vc_averages, vols_avg[1:6], color=Makie.wong_colors()[1], label=rich("V. cholerae"; font=:italic))
-    scatter!(ax, pf_averages, vols_avg[7:8], color=Makie.wong_colors()[2], label=rich("P. fluorescens"; font=:italic))
-    scatter!(ax, pa_averages, vols_avg[9:10], color=Makie.wong_colors()[3], label=rich("P. aeruginosa"; font=:italic))
+    scatter!(ax, pf_averages, vols_avg[7:9], color=Makie.wong_colors()[2], label=rich("P. fluorescens"; font=:italic))
+    scatter!(ax, pa_averages, vols_avg[10:11], color=Makie.wong_colors()[3], label=rich("P. aeruginosa"; font=:italic))
 	lines!(ax, xbase, model.(xbase, (pstar,)), color="black")
 	ax.rightspinevisible = false
 	ax.topspinevisible = false
@@ -364,19 +363,21 @@ function main()
     #vols = DataFrame(CSV.File(joinpath(data_folder, "high_res_data.csv")))
     #vc_mass_path = "/mnt/e/Brightfield_paper/vc_fig1B/250120_4x_10x_plastic_Drawer1 final/4x/Numerical data/biomass.csv"
     #pa_pf_mass_path = "/mnt/e/Brightfield_paper/nonvc_fig1B/250120_4x_10x_plastic_2_Drawer2 final/4x/Numerical data/biomass.csv"
+    #pf_wspf_path = "/mnt/e/Brightfield_paper/Pflu_wspF/4x/Numerical data/biomass.csv"
     #sp_mass_path = "/mnt/e/Brightfield_paper/sp_fig1B/4x/Numerical data/biomass.csv"
     #vc_mass = DataFrame(CSV.File(vc_mass_path))
     #pa_pf_mass = DataFrame(CSV.File(pa_pf_mass_path))
+    #pf_wspf_mass = DataFrame(CSV.File(pf_wspf_path))
     #sp_mass = DataFrame(CSV.File(sp_mass_path))
-    #fig1B!(vols, vc_mass, pa_pf_mass, nothing)
+    #fig1B!(vols, vc_mass, pa_pf_mass, pf_wspf_mass, nothing)
 
     #OD_image_path = "/mnt/f/Brightfield_paper/tests/OD_test.tif"
     #fig1A_OD_image(OD_image_path)  
     #fig1A_data_path = data_folder*"fig1A_lineplot.csv"
     #fig1A_lineplot!(fig1A_data_path)
-    focal_plane_path = "/mnt/e/Brightfield_paper/focal_plane/data/Numerical data/biomass.csv"
-    focal_plane_data = DataFrame(CSV.File(focal_plane_path))
-    figS2_focal_plane!(focal_plane_data)  
+    #focal_plane_path = "/mnt/e/Brightfield_paper/focal_plane/data/Numerical data/biomass.csv"
+    #focal_plane_data = DataFrame(CSV.File(focal_plane_path))
+    #figS2_focal_plane!(focal_plane_data)  
     #inoculum_vc_path = "/mnt/f/Brightfield_paper/inoculum/250105_4x_bf_biospa_JP_Drawer3 05-Jan-2025 16-20-13/250105_Plate 1!PLATE_ID!_/Numerical data/biomass.csv"
     #inoculum_vc_data = DataFrame(CSV.File(inoculum_vc_path))
     #fig2_Vc!(inoculum_vc_data)
@@ -384,11 +385,13 @@ function main()
     #vols = DataFrame(CSV.File(joinpath(data_folder, "high_res_data.csv")))
     #vc_mass_path = "/mnt/e/Brightfield_paper/vc_fig1B/250120_4x_10x_plastic_Drawer1 final/10x/Numerical data/biomass.csv"
     #pa_pf_mass_path = "/mnt/e/Brightfield_paper/nonvc_fig1B/250120_4x_10x_plastic_2_Drawer2 final/10x/Numerical data/biomass.csv"
-    #sp_mass_path = "/mnt/e/Brightfield_paper/sp_fig1B/4x/Numerical data/biomass.csv"
+    #pf_wspf_path = "/mnt/e/Brightfield_paper/Pflu_wspF/10x/Numerical data/biomass.csv"
+    #sp_mass_path = "/mnt/e/Brightfield_paper/sp_fig1B/10x/Numerical data/biomass.csv"
     #vc_mass = DataFrame(CSV.File(vc_mass_path))
     #pa_pf_mass = DataFrame(CSV.File(pa_pf_mass_path))
+    #pf_wspf_mass = DataFrame(CSV.File(pf_wspf_path))
     #sp_mass = DataFrame(CSV.File(sp_mass_path))
-    #fig1B!(vols, vc_mass, pa_pf_mass, nothing)
+    #fig1B!(vols, vc_mass, pa_pf_mass, pf_wspf_mass, nothing)
     
     #vols = DataFrame(CSV.File(joinpath(data_folder, "high_res_data.csv")))
     #EVOS_path = "/mnt/e/Brightfield_paper/EVOS/Numerical data/biomass.csv"
