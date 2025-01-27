@@ -108,27 +108,27 @@ mkpath(DISPLAYS_PATH)
         folder = joinpath(FILE_PATH, splitext(analyze_folder)[1])
         DISPLAY_IMGPATH = ""
         DISPLAY_MASKPATH = ""
-        image_display_path = "/$DISPLAY_IMGPATH#$(Base.time())" 
-        mask_display_path = "/$DISPLAY_MASKPATH#$(Base.time())"
+        image_display_path = "/$DISPLAY_IMGPATH?string(time_ns())" 
+        mask_display_path = "/$DISPLAY_MASKPATH?string(time_ns())"
         filter!(e -> e != "", selected_raw_display_files)
         raw_image = load_raw_display(folder, selected_raw_display_files)
         if length(selected_raw_display_files) > 0 
             if length(selected_raw_display_files) == 1 && length(size(raw_image)) == 2
                 DISPLAY_IMGPATH = "displays/display.jpg"
                 FileIO.save(joinpath(@__DIR__, "public", DISPLAY_IMGPATH), raw_image)
-                image_display_path = "/$DISPLAY_IMGPATH#$(Base.time())" 
+                image_display_path = "/$DISPLAY_IMGPATH?string(time_ns())" 
             else
                 DISPLAY_IMGPATH = "displays/display.gif"
                 FileIO.save(joinpath(@__DIR__, "public", DISPLAY_IMGPATH), raw_image, fps=10)
-                image_display_path = "/$DISPLAY_IMGPATH#$(Base.time())" 
+                image_display_path = "/$DISPLAY_IMGPATH?string(time_ns())" 
             end
         else
             image_display_path = ""
             mask_display_path = ""
             DISPLAY_IMGPATH = ""
             DISPLAY_MASKPATH = ""
-            image_display_path = "/$DISPLAY_IMGPATH#$(Base.time())"
-            mask_display_path = "/$DISPLAY_MASKPATH#$(Base.time())"
+            image_display_path = "/$DISPLAY_IMGPATH?string(time_ns())"
+            mask_display_path = "/$DISPLAY_MASKPATH?string(time_ns())"
         end
         DisplayRawButtonProgress_processing = false
     end
@@ -140,8 +140,8 @@ mkpath(DISPLAYS_PATH)
         TestButtonProgress_processing = true
         DISPLAY_IMGPATH = ""
         DISPLAY_MASKPATH = ""
-        image_display_path = "/$DISPLAY_IMGPATH#$(Base.time())" 
-        mask_display_path = "/$DISPLAY_MASKPATH#$(Base.time())"
+        image_display_path = "/$DISPLAY_IMGPATH?string(time_ns())" 
+        mask_display_path = "/$DISPLAY_MASKPATH?string(time_ns())"
         filter!(e -> e != "", selected_test_files)
         if length(selected_test_files) > 0 
             if length(selected_test_files) == 1
@@ -166,15 +166,15 @@ mkpath(DISPLAYS_PATH)
                 FileIO.save(joinpath(@__DIR__, "public", DISPLAY_IMGPATH), normalized, fps=10)
                 FileIO.save(joinpath(@__DIR__, "public", DISPLAY_MASKPATH), overlay, fps=10)
             end
-            image_display_path = "/$DISPLAY_IMGPATH#$(Base.time())" 
-            mask_display_path = "/$DISPLAY_MASKPATH#$(Base.time())"
+            image_display_path = "/$DISPLAY_IMGPATH?string(time_ns())" 
+            mask_display_path = "/$DISPLAY_MASKPATH?string(time_ns())"
         else
             image_display_path = ""
             mask_display_path = ""
             DISPLAY_IMGPATH = ""
             DISPLAY_MASKPATH = ""
-            image_display_path = "/$DISPLAY_IMGPATH#$(Base.time())"
-            mask_display_path = "/$DISPLAY_MASKPATH#$(Base.time())"
+            image_display_path = "/$DISPLAY_IMGPATH?string(time_ns())"
+            mask_display_path = "/$DISPLAY_MASKPATH?string(time_ns())"
         end
         TestButtonProgress_processing = false
     end
@@ -220,8 +220,8 @@ mkpath(DISPLAYS_PATH)
         DisplayProcessedButtonProgress_processing = true
         DISPLAY_IMGPATH = ""
         DISPLAY_MASKPATH = ""
-        image_display_path = "/$DISPLAY_IMGPATH#$(Base.time())"
-        mask_display_path = "/$DISPLAY_MASKPATH#$(Base.time())"
+        image_display_path = "/$DISPLAY_IMGPATH?string(time_ns())"
+        mask_display_path = "/$DISPLAY_MASKPATH?string(time_ns())"
         filter!(e -> e != "", selected_raw_display_files)
         processed_image, overlay = load_processed_display(joinpath(DOWNLOADS_PATH, basename(folder)), selected_processed_image)
         if selected_processed_image != "" 
@@ -230,23 +230,23 @@ mkpath(DISPLAYS_PATH)
                 DISPLAY_MASKPATH = "displays/mask_display.jpg"
                 FileIO.save(joinpath(@__DIR__, "public", DISPLAY_IMGPATH), processed_image)
                 FileIO.save(joinpath(@__DIR__, "public", DISPLAY_MASKPATH), overlay)
-                image_display_path = "/$DISPLAY_IMGPATH#$(Base.time())" 
-                mask_display_path = "/$DISPLAY_MASKPATH#$(Base.time())"
+                image_display_path = "/$DISPLAY_IMGPATH?string(time_ns())" 
+                mask_display_path = "/$DISPLAY_MASKPATH?string(time_ns())"
             else
                 DISPLAY_IMGPATH = "displays/display.gif"
                 DISPLAY_MASKPATH = "displays/mask_display.gif"
                 FileIO.save(joinpath(@__DIR__, "public", DISPLAY_IMGPATH), processed_image, fps=10)
                 FileIO.save(joinpath(@__DIR__, "public", DISPLAY_MASKPATH), overlay, fps=10)
-                image_display_path = "/$DISPLAY_IMGPATH#$(Base.time())" 
-                mask_display_path = "/$DISPLAY_MASKPATH#$(Base.time())"
+                image_display_path = "/$DISPLAY_IMGPATH?string(time_ns())" 
+                mask_display_path = "/$DISPLAY_MASKPATH?string(time_ns())"
             end
         else
             image_display_path = ""
             mask_display_path = ""
             DISPLAY_IMGPATH = ""
             DISPLAY_MASKPATH = ""
-            image_display_path = "/$DISPLAY_IMGPATH#$(Base.time())"
-            mask_display_path = "/$DISPLAY_MASKPATH#$(Base.time())"
+            image_display_path = "/$DISPLAY_IMGPATH?string(time_ns())"
+            mask_display_path = "/$DISPLAY_MASKPATH?string(time_ns())"
         end
         selected_processed_image = ""
         DisplayProcessedButtonProgress_processing = false

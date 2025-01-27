@@ -14,6 +14,7 @@ using CoordinateTransformations
 using AbstractFFTs
 using Compat
 using FFTW
+using ProgressMeter
 
 round_odd(x) = div(x, 2) * 2 + 1
 compmax(x) = length(x) > 1 ? maximum(x[1:end]) : 0
@@ -344,7 +345,14 @@ function analysis_main(file_path, output_path, files, dust_correction, batch_pro
     biomass_data = []
     columns = []
     files = [f for f in files if f != Imin_path && f != Imax_path]
-    for file in files
+
+	outer_iters = 10
+	inner_iters = 5
+
+	# Initialize the progress bar for the outer loop
+	progress = Progress(length(files), desc="% analysis done")
+	for file in files
+		next!(progress)
         if file ∉ analyzed
             test_image = TiffImages.load(joinpath(file_path, file); mmap=true)
             img_dims = size(test_image)
@@ -403,7 +411,7 @@ function analysis_main(file_path, output_path, files, dust_correction, batch_pro
 		padded = [vcat(l, fill(Missing, max_length - length(l))) for l in biomass_data]
 		df = DataFrame(padded, Symbol.(columns))
         write(BF_output_file, df)
-    end # loop over directories
+    end # loop over files
 end
 
 end # module
