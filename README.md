@@ -31,7 +31,7 @@ To access the web app, open your browser and navigate to `http://localhost:8000/
 
 **Upload data:** Select uploads by pressing "+" within the "Upload image folders" box. 
 
-**Calibration:** Within the "Select folder to calibrate settings" box, select which zipped file you would like to unzip for selecting Imin/Imax and for display. This is not strictly necessary if you don't have Imin/Imax, don't want to display raw images or test thresholding, and want to apply the same settings to all images. Select your Imin and Imax files from the options (if applicable). 
+**Calibration:** Within the "Select folder" box, select which zipped file you would like to unzip for selecting Imin/Imax, for image display, and for testing the thresholding. This is not strictly necessary if you don't have Imin/Imax, don't want to display raw images or test thresholding, and want to apply the same settings to all images. Select your Imin and Imax files from the options (if applicable). 
 
 **Display:**  Optionally choose raw images to display: one image, unless
 several images comprise a timelapse, in which case the files have to satisfy the naming convention "...int.tif"), where "int" is an integer. For example, you might have images with file names that look like "A1\_001.tif", "A1\_002.tif", etc. If the file name does not terminate in a number (which denotes the temporal order), or the portion upstream of the number is not the same for all images that comprise a timelapse, there is no way for the code to know that the images should be

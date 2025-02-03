@@ -28,7 +28,7 @@ row([
 	cell(
           class="st-module col-6",
           [
-           h6("Select folder to calibrate settings"),
+           h6("Select folder (to set Imin/Imax, display images, and/or test threshold)"),
            Stipple.select(:analyze_folder; options=:zipped_files, style="margin-bottom: 20px;",
                          class="tex_text", clearable=true),
             btn(
@@ -49,8 +49,7 @@ row([
            h6("Imax file (optional)"),
            Stipple.select(:selected_Imax; options=:analyze_folder_files, style="margin-bottom: 40px;", class="tex_text", clearable=true),
             h6("Choose file(s) to display (optional)"),
-           Stipple.select(:selected_raw_display_files, options=:analyze_folder_files, clearable=true, hideselected = true, multiple = true,
-                          counter=true),
+           Stipple.select(:selected_raw_display_files, options=:analyze_folder_files, clearable=true, hideselected = true, multiple = true),
             btn(
                 "Display raw image(s)",
                 @click(:DisplayRawButtonProgress_process),
@@ -63,8 +62,7 @@ row([
             slider(0.0000:0.0001:1.0000, :fixed_thresh),
             p("Fixed threshold = {{fixed_thresh}}", style="margin-bottom: 20px;"),
             h6("Choose file(s) to test threshold (optional)"),
-           Stipple.select(:selected_test_files, options=:analyze_folder_files, clearable=true, hideselected = true, multiple = true,
-                          counter=true),
+           Stipple.select(:selected_test_files, options=:analyze_folder_files, clearable=true, hideselected = true, multiple = true),
             btn(
                 "Test threshold",
                 @click(:TestButtonProgress_process),
