@@ -1,0 +1,16 @@
+┌ Info: 2025-02-03 15:19:58 Watching ["/root/code/Brightfield-biofilm-assay/WebApp"]
+└ @ GenieAutoReload /root/.julia/packages/GenieAutoReload/qpImd/src/GenieAutoReload.jl:19
+┌ Info: 2025-02-03 15:19:59 Autoreloading
+└ @ GenieAutoReload /root/.julia/packages/GenieAutoReload/qpImd/src/GenieAutoReload.jl:22
+┌ Info: 2025-02-03 15:20:01 
+│ Web Server starting at http://127.0.0.1:8000 
+└ @ Genie.Server /root/.julia/packages/Genie/TKJWe/src/Server.jl:182
+┌ Info: 2025-02-03 15:20:01 Listening on: 127.0.0.1:8000, thread id: 1
+└ @ HTTP.Servers /root/.julia/packages/HTTP/4AUPl/src/Servers.jl:382
+┌ Info: 2025-02-03 15:20:37 File was uploaded: 
+│   fileuploads = Dict{AbstractString, AbstractString}("name" => "A1_03_1_1_Bright Field_012.zip", "channel" => "LUZNCZZFGJBJCNCQCEBVZSTNXXETVAIO", "path" => "/tmp/jl_zUEdZw/jl_vwOs7S")
+└ @ Main /root/code/Brightfield-biofilm-assay/WebApp/app.jl:49
+┌ Info: 2025-02-03 15:20:38 uploaded
+└ @ Main /root/code/Brightfield-biofilm-assay/WebApp/app.jl:66
+┌ Info: 2025-02-03 16:19:01 Server on 127.0.0.1:8000 closing
+└ @ HTTP.Servers /root/.julia/packages/HTTP/4AUPl/src/Servers.jl:409
