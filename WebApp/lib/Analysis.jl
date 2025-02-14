@@ -191,7 +191,7 @@ function crop(img_stack)
     return cropped_stack, (i1, i2, j1, j2)
 end
 
-function stack_preprocess(img_stack, normalized_stack, registered_stack, blockDiameter, nframes, mxshift, sig, Imin)       
+function stack_preprocess(img_stack, normalized_stack, registered_stack, blockDiameter, nframes, mxshift, sig, Imin, Imax)       
     shifts = (0.0, 0.0) 
     @inbounds for t in 1:nframes
         img = img_stack[:,:,t]
@@ -225,7 +225,10 @@ function stack_preprocess(img_stack, normalized_stack, registered_stack, blockDi
     if Imin != nothing
         Imin = Imin[row_min:row_max, col_min:col_max]
     end
-    return img_stack, processed_stack, Imin
+    if Imax != nothing
+        Imax = Imax[row_min:row_max, col_min:col_max]
+    end
+    return img_stack, processed_stack, Imin, Imax
 end
 
 function write_OD_images!(OD_images, output_dir, filename)
@@ -275,7 +278,7 @@ function timelapse_processing(images, blockDiameter, ntimepoints, shift_thresh, 
     images = Float64.(images)
     normalized_stack = similar(images)
     registered_stack = similar(images)
-    images, output_stack, Imin = stack_preprocess(images, normalized_stack, registered_stack, blockDiameter, ntimepoints, shift_thresh, sig, Imin)
+    images, output_stack, Imin, Imax = stack_preprocess(images, normalized_stack, registered_stack, blockDiameter, ntimepoints, shift_thresh, sig, Imin)
     masks = zeros(Bool, size(images))
     compute_mask!(output_stack, masks, fixed_thresh, ntimepoints)
     if dust_correction == true 

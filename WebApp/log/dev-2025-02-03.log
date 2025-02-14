@@ -36,3 +36,5 @@
 └ @ GenieAutoReload /root/.julia/packages/GenieAutoReload/qpImd/src/GenieAutoReload.jl:22
 ┌ Info: 2025-02-03 16:51:48 Autoreloading
 └ @ GenieAutoReload /root/.julia/packages/GenieAutoReload/qpImd/src/GenieAutoReload.jl:22
+┌ Info: 2025-02-03 16:52:27 Server on 127.0.0.1:8000 closing
+└ @ HTTP.Servers /root/.julia/packages/HTTP/4AUPl/src/Servers.jl:409
