@@ -17,6 +17,16 @@ CairoMakie.activate!(type="svg")
 
 odr = pyimport("scipy.odr")
 
+function gg_color_hue(n::Int)
+	hues = range(15, stop=375, length=n+1)
+	return [LCHuv(65, 100, h) for h in hues[1:end-1]]
+end
+
+function gg_color(i::Int, maxgroups::Int)
+	hues = range(15, stop=375, length=maxgroups+1)
+	return LCHuv(65, 100, hues[i])
+end 
+
 function extract_float(gray_string::String)
     m = match(r"Gray\{Float64\}\(([-+]?\d*\.?\d+(?:[eE][-+]?\d+)?)\)", gray_string)
     if m !== nothing
@@ -26,7 +36,7 @@ function extract_float(gray_string::String)
     end
 end
 
-function fig1B!(vols, vc_mass, pa_pf_mass, pf_wspf_mass, sp_mass)
+function fig1B!(vols, vols_sp, vc_mass, pa_pf_mass, pf_wspf_mass, sp_mass)
     # Biovolume (x-axis) vs. brightfield biomass (y-axis)
     # Scatter + best-fit
     # Data are 1D dataframes where filenames/wells are the column names
@@ -34,7 +44,6 @@ function fig1B!(vols, vc_mass, pa_pf_mass, pf_wspf_mass, sp_mass)
     # Ensure vols are in the correct order
     substrings = ["D39", "36"]
 	vols = filter(row -> !any(substr -> occursin(substr, row.first), substrings), vols)
-	
 	order_list = ["vpsL_1", "vpsL_2", "vpsL_3", 
                   "0ara_1", "0ara_2", "0ara_3", 
                   "0025ara_1", "0025ara_2", "0025ara_3",
@@ -51,6 +60,15 @@ function fig1B!(vols, vc_mass, pa_pf_mass, pf_wspf_mass, sp_mass)
 	vols.order = [order_map[substring] for row in eachrow(vols) for substring in order_list if occursin(substring, row.first)]
 	vols = sort(vols, :order)
 	select!(vols, Not(:order))
+
+    order_list = ["D39_WT_1", "D39_WT_2", "D39_WT_3", "SV36_WT_1", "SV36_WT_2", "SV36_WT_3",
+                  "D39_dcps_1", "D39_dcps_2", "D39_dcps_3", "SV36_dcps_1", "SV36_dcps_2",
+                  "SV36_dcps_3"]
+	order_map = Dict(substring => idx for (idx, substring) in enumerate(order_list))
+	vols_sp.order = [order_map[substring] for row in eachrow(vols_sp) for substring in order_list if occursin(substring, row.first)]
+	vols_sp = sort(vols_sp, :order)
+	select!(vols_sp, Not(:order))
+    vols = vcat(vols, vols_sp)
 
 	function map_well_identifier(file_path)
 		well_identifier = match(r"([A-Z])\d+", basename(file_path))[1][1]
@@ -76,6 +94,16 @@ function fig1B!(vols, vc_mass, pa_pf_mass, pf_wspf_mass, sp_mass)
     grouped_values = [group.Value for group in groupby(vc_mass, :condition)]
     vc_averages = [mean(subarray) for subarray in grouped_values] 
     vc_stds = [std(subarray) for subarray in grouped_values]
+    
+    rename!(sp_mass, Dict(col => replace(col, r".*/(.*?)_.*" => s"\1") for col in names(sp_mass)))
+    D39_WT = sp_mass[1, Cols("A1", "A2", "A3", "B1", "B2", "B3", "C1", "C2", "C3")]
+    D39_dcps = sp_mass[1, Cols("A4", "A5", "A6", "B4", "B5", "B6", "C4", "C5", "C6")]
+    SV36_WT = sp_mass[1, Cols("D1", "D2", "D3", "E1", "E2", "E3", "F1", "F2", "F3")]
+    SV36_dcps = sp_mass[1, Cols("D4", "D5", "D6", "E4", "E5", "E6", "F4", "F5", "F6")]
+    grouped_values = [[values(D39_WT)...], [values(SV36_WT)...], [values(D39_dcps)...], 
+                      [values(SV36_dcps)...]]
+    sp_averages = [mean(subarray) for subarray in grouped_values] 
+    sp_stds = [std(subarray) for subarray in grouped_values]
 
 @pyexec """
 def model(p, x):
@@ -86,8 +114,8 @@ def model(p, x):
     lb = [0.0, 0.0]
     ub = [Inf, Inf]
 
-    mass_avg = vcat(vc_averages, pf_averages, pa_averages)
-    stds = vcat(vc_stds, pf_stds, pa_stds)
+    mass_avg = vcat(vc_averages, pf_averages, pa_averages, sp_averages)
+    stds = vcat(vc_stds, pf_stds, pa_stds, sp_stds)
     col2 = vols.second
     vols_avg = [mean(col2[i:i+2]) for i in 1:3:length(col2) if i+2 <= length(col2)]
     vols_std = [std(col2[i:i+2]) for i in 1:3:length(col2) if i+2 <= length(col2)]
@@ -97,21 +125,20 @@ def model(p, x):
     odrdata = odr.Data(mass_avg, vols_avg, wd=1/(stds/sqrt(9)), we=1/(vols_std/sqrt(3)))
     myodr = odr.ODR(odrdata, linear, beta0=p0)
     output = myodr.run()
-    #fit = curve_fit(model, mass_avg, vols_avg, p0, lower=lb, upper=ub)
-    #pstar = coef(fit)
-    #@show fitlinear(mass_avg,vols_avg)
-	#xbase = collect(range(minimum(vc_averages), maximum(vc_averages), 100))
     fig = Figure(size=(6*72,3*72))
     ax = Axis(fig[1, 1], xlabel="BF-biofilm biomass (a.u.)", ylabel="CF-biofilm biomass (μm³)")
     errorbars!(ax, vc_averages, vols_avg[1:6], vc_stds, color=Makie.wong_colors()[1], direction = :x)
     errorbars!(ax, pf_averages, vols_avg[7:9], pf_stds, color=Makie.wong_colors()[2], direction = :x)
     errorbars!(ax, pa_averages, vols_avg[10:11], pa_stds, color=Makie.wong_colors()[3], direction = :x)
+    errorbars!(ax, sp_averages, vols_avg[12:15], sp_stds, color=Makie.wong_colors()[4], direction = :x)
     errorbars!(ax, vc_averages, vols_avg[1:6], vols_std[1:6], color=Makie.wong_colors()[1], direction = :y)
     errorbars!(ax, pf_averages, vols_avg[7:9], vols_std[7:9], color=Makie.wong_colors()[2], direction = :y)
     errorbars!(ax, pa_averages, vols_avg[10:11], vols_std[10:11], color=Makie.wong_colors()[3], direction = :y)
+    errorbars!(ax, sp_averages, vols_avg[12:15], vols_std[12:15], color=Makie.wong_colors()[4], direction = :y)
     scatter!(ax, vc_averages, vols_avg[1:6], color=Makie.wong_colors()[1], label=rich("V. cholerae"; font=:italic))
     scatter!(ax, pf_averages, vols_avg[7:9], color=Makie.wong_colors()[2], label=rich("P. fluorescens"; font=:italic))
     scatter!(ax, pa_averages, vols_avg[10:11], color=Makie.wong_colors()[3], label=rich("P. aeruginosa"; font=:italic))
+    scatter!(ax, sp_averages, vols_avg[12:15], color=Makie.wong_colors()[4], label=rich("S. pneumoniae"; font=:italic))
     reg_params = pyconvert(Array, output.beta)
     reg_error = pyconvert(Array, output.sd_beta)
     avg = reg_params[1] .* mass_avg
@@ -329,7 +356,7 @@ end
 function figS2_focal_plane!(data)
     # 7 focal planes, 3 replicates
     # c, d, e, f, g -> 5 plots
-    rows = ["C", "D", "E"]
+    rows = ["C", "D", "G"]
     fig = Figure(size=(10*72, 3*72))
     ga = fig[1, 1] = GridLayout()
     data_long = stack(data, Not([]), variable_name = :FilePath, value_name = :Value)
@@ -369,7 +396,7 @@ function figS2_focal_plane!(data)
             ax.title = "Untreated"
         end
         if i == 3
-            ax.title = "+0.035% Ara"
+            ax.title = "+0.1% Ara"
         end
         #ylims!(ax, 0.0, 0.27)
     end
@@ -433,12 +460,252 @@ function fig2_cps_nocps!(data)
     save("fig2_SV36.svg", fig)
 end
 
+function detect_outliers_iqr(data)
+    q1 = quantile(data, 0.25)
+    q3 = quantile(data, 0.75)
+    iqr = q3 - q1
+
+    lower_bound = q1 - 1.5 * iqr
+    upper_bound = q3 + 1.5 * iqr
+
+    outliers = filter(x -> x < lower_bound || x > upper_bound, data)
+    return outliers, lower_bound, upper_bound
+end
+
+function fig3_stats!(screen_plate_paths)
+	wells_to_remove = Dict(
+		1 => ["A1"], 2 => ["A1"], 3 => [], 4 => ["C6"], 5 => ["A1"], 
+		6 => ["A1", "B6", "H1"], 7 => ["A1", "G6"], 8 => ["A1"], 9 => ["A1"], 
+		10 => ["A1", "A9"], 11 => ["A1", "C5", "D11"], 12 => ["A1", "C3", "C7"], 
+		13 => [], 14 => [], 15 => ["A1"], 16 => ["A1", "B6", "H2"], 
+		17 => ["A1", "F10"], 18 => ["A1"], 19 => ["C9"], 20 => ["B1"], 
+		21 => ["A1", "C6"], 22 => [], 23 => ["E5"], 24 => ["A1", "F12"], 
+		25 => ["A1"]
+	)
+    all_biofilm = []
+    all_planktonic = []
+    for (i,plate_path) in enumerate(screen_plate_paths)
+        biofilm = DataFrame(CSV.File(plate_path*"/Numerical data/biomass.csv"))
+        planktonic = DataFrame(CSV.File(plate_path*"/Numerical data/planktonic.csv"))
+		rename!(biofilm, Dict(col => replace(col, r".*/(.*?)_.*" => s"\1") for col in names(biofilm)))
+        rename!(planktonic, Dict(col => replace(col, r".*/(.*?)_.*" => s"\1") for col in names(planktonic)))
+        planktonic = planktonic[:,Not(wells_to_remove[i])]
+        biofilm = biofilm[:,Not(wells_to_remove[i])]
+        append!(all_planktonic, values(planktonic[1,:]))
+        append!(all_biofilm, values(biofilm[1,:]))
+    end
+    sort!(all_biofilm, rev=true)
+    sort!(all_planktonic, rev=true)
+    biofilm_o, biofilm_lb, biofilm_ub = detect_outliers_iqr(all_biofilm)
+    planktonic_o, planktonic_lb, planktonic_ub = detect_outliers_iqr(all_planktonic)
+	fig = Figure(size=(4*72, 3.5*72))
+	ax = Axis(fig[1, 1], xlabel="Transposon rank", ylabel="BF-Biofilm biomass (a.u.)")
+	scatter!(ax, 1:length(all_biofilm), all_biofilm, color=Makie.wong_colors()[5], markersize=2)
+    hlines!(ax, biofilm_lb, color=:grey, linestyle=:dash)
+    hlines!(ax, biofilm_ub, color=:grey, linestyle=:dash)
+    ax.xgridvisible = false
+    ax.ygridvisible = false
+	ax.rightspinevisible = false
+	ax.topspinevisible = false
+    save("fig3_biofilm.svg", fig)
+	
+    fig = Figure(size=(4*72, 3.5*72))
+    ax = Axis(fig[1, 1], xlabel="BF-Biofilm biomass (a.u.)", ylabel="Frequency")
+    hist!(ax, all_biofilm, color=(Makie.wong_colors()[5], 0.5), bins=30)
+    vlines!(ax, biofilm_lb, color=:grey, linestyle=:dash)
+    vlines!(ax, biofilm_ub, color=:grey, linestyle=:dash)
+    ax.xgridvisible = false
+    ax.ygridvisible = false
+	ax.rightspinevisible = false
+	ax.topspinevisible = false
+    save("fig3_biofilm_hist.svg", fig)
+
+    fig = Figure(size=(4*72, 3.5*72))
+	ax = Axis(fig[1, 1], xlabel="Transposon rank", ylabel="Planktonic biomass (a.u.)")
+	scatter!(ax, 1:length(all_planktonic), all_planktonic, color=Makie.wong_colors()[6], markersize=2)
+    hlines!(ax, planktonic_lb, color=:grey, linestyle=:dash)
+    hlines!(ax, planktonic_ub, color=:grey, linestyle=:dash)
+    ax.xgridvisible = false
+    ax.ygridvisible = false
+	ax.rightspinevisible = false
+	ax.topspinevisible = false
+    save("fig3_planktonic.svg", fig)
+    
+    fig = Figure(size=(4*72, 3.5*72))
+    ax = Axis(fig[1, 1], xlabel="Planktonic biomass (a.u.)", ylabel="Frequency")
+    hist!(ax, all_planktonic, color=(Makie.wong_colors()[6], 0.5), bins=30)
+    vlines!(ax, planktonic_lb, color=:grey, linestyle=:dash)
+    vlines!(ax, planktonic_ub, color=:grey, linestyle=:dash)
+    ax.xgridvisible = false
+    ax.ygridvisible = false
+	ax.rightspinevisible = false
+	ax.topspinevisible = false
+    save("fig3_planktonic_hist.svg", fig)
+end
+
+function wash_nowash!(wash, nowash)
+    # Rename columns for easier handling
+    rename!(wash, Dict(col => replace(col, r".*/(.*?)_.*" => s"\1") for col in names(wash)))
+    rename!(nowash, Dict(col => replace(col, r".*/(.*?)_.*" => s"\1") for col in names(nowash)))
+
+    # Define conditions and tick labels; only using "WT", "ara0025", and "ara01"
+    conditions = ["WT", "ara0025", "ara01"]
+    tick_labels = Dict("WT" => "Untreated", "ara0025" => "+0.025% Ara", "ara01" => "+0.1% Ara")
+    
+    # Define column mapping for the remaining conditions.
+    col_mapping = Dict(
+        "WT" => "C", "ara0025" => "D", "ara01" => "G"
+    )
+
+    # Initialize arrays for the beeswarm (jitter) data and summary statistics.
+    data_x = Float64[]          # x (group) positions for each measurement
+    data_y = Float64[]          # measured values for each point
+    treatment_flag = Int[]      # treatment flag: 1 for wash, 2 for nowash
+
+    # Group summary arrays for crossbar! (one entry per treatment group)
+    group_summary_x = Float64[]
+    group_means = Float64[]
+    group_mins = Float64[]
+    group_maxes = Float64[]
+    group_treatment = Int[]
+
+    # Prepare x-axis tick positions and labels (one tick per condition)
+    condition_ticks = Float64[]
+    condition_labels_vec = String[]
+
+    # Assign a unique group ID for each treatment within a condition.
+    group_id = 1
+    for cond in conditions
+        # Extract values using the appropriate column mapping and suffixes.
+        wash_vals = values(wash[end, Cols(col_mapping[cond] .* ["2", "3", "4", "5", "6", "7", "8", "9", "10"])])
+        nowash_vals = values(nowash[end, Cols(col_mapping[cond] .* ["2", "3", "4", "5", "6", "7", "8", "9", "10"])])
+    
+        # --- For the wash treatment ---
+        n_wash = length(wash_vals)
+        append!(data_y, wash_vals)
+        append!(data_x, fill(group_id, n_wash))
+        append!(treatment_flag, fill(1, n_wash))
+    
+        push!(group_summary_x, group_id)
+        push!(group_means, mean(wash_vals))
+        push!(group_mins, minimum(wash_vals))
+        push!(group_maxes, maximum(wash_vals))
+        push!(group_treatment, 1)
+    
+        group_id += 1  # Increment group id for nowash treatment
+    
+        # --- For the nowash treatment ---
+        n_nowash = length(nowash_vals)
+        append!(data_y, nowash_vals)
+        append!(data_x, fill(group_id, n_nowash))
+        append!(treatment_flag, fill(2, n_nowash))
+    
+        push!(group_summary_x, group_id)
+        push!(group_means, mean(nowash_vals))
+        push!(group_mins, minimum(nowash_vals))
+        push!(group_maxes, maximum(nowash_vals))
+        push!(group_treatment, 2)
+    
+        # Place tick at midpoint between the two treatment groups for this condition
+        push!(condition_ticks, group_id - 0.5)
+        push!(condition_labels_vec, tick_labels[cond])
+    
+        group_id += 1  # Increment for the next condition
+    end
+
+    # Define colors for the treatments – using the first two colors from Makie’s Paired_3 colormap
+    wash_color = Makie.to_colormap(:Paired_3)[1]
+    nowash_color = Makie.to_colormap(:Paired_3)[2]
+
+    # Create a figure with two slots: main axis at fig[1,1] and legend axis at fig[1,2].
+    fig = Figure(size = (6*72, 3.2*72))
+    ax = Axis(fig[1, 1],
+        xlabel = "",
+        ylabel = "BF-biofilm biomass (a.u.)",
+        xticks = (condition_ticks, condition_labels_vec)
+    )
+
+    # Plot crossbars (with midlines showing the means) for each treatment group.
+    midlinecolors = [ (t == 1 ? wash_color : nowash_color) for t in group_treatment ]
+    crossbar!(ax, group_summary_x, group_means, group_mins, group_maxes;
+              color = :white, midlinecolor = midlinecolors)
+
+    # Plot the beeswarm (jitter) points.
+    plt = beeswarm!(ax, data_x, data_y,
+        color = treatment_flag,
+        algorithm = UniformJitter(),
+        strokecolor = :black,
+        strokewidth = 1
+    )
+    plt.colormap[] = [wash_color, nowash_color]
+
+    # Add dummy scatter plots (with no data) to generate legend entries.
+    d_wash = scatter!(ax, Float64[], Float64[]; color=wash_color, markersize=8)
+    d_nowash = scatter!(ax, Float64[], Float64[]; color=nowash_color, markersize=8)
+
+    # Create the legend in the second axis slot, fig[1,2]
+    lg = Legend(fig[1, 2], [d_wash, d_nowash], ["With washing", "Without washing"])
+
+    # General styling for the main axis.
+    ax.xticklabelrotation = 45
+    ax.xgridvisible = false
+    ax.ygridvisible = false
+    ax.rightspinevisible = false
+    ax.topspinevisible = false
+
+    save("wash_nowash_plot.svg", fig)
+end
+
+
+function sample_timelapses!(vc_data, sp_data)
+    fig = Figure(size=(5*72, 2.7*72))
+    ax = Axis(fig[1, 1], xlabel="Time (h)", ylabel="BF-biofilm biomass (a.u.)")
+    rename!(sp_data, Dict(col => replace(col, r".*/(.*?)_.*" => s"\1") for col in names(sp_data)))
+    D39_WT = sp_data[:, Cols("A1", "A2", "A3", "B1", "B2", "B3", "C1", "C2", "C3")]
+    D39_dcps = sp_data[:, Cols("A4", "A5", "A6", "B4", "B5", "B6", "C4", "C5", "C6")]
+    SV36_WT = sp_data[:, Cols("D1", "D2", "D3", "E1", "E2", "E3", "F1", "F2", "F3")]
+    SV36_dcps = sp_data[:, Cols("D4", "D5", "D6", "E4", "E5", "E6", "F4", "F5", "F6")]
+
+	# S. pneumoniae 
+    time = 0:0.5:nrow(D39_WT)/2-0.5
+    avg = reduce(+, eachcol(D39_WT)) ./ ncol(D39_WT) 
+    stdev = dropdims(std(Array(D39_WT), dims=2), dims=2)  
+    lines!(ax, time, avg, color=gg_color(1,4), label="D39 wild-type")
+    band!(ax, time, avg-stdev, avg+stdev, color=(gg_color(1,4), 0.3))
+    scatter!(ax, time, avg, color=gg_color(1,4), marker=:circle,  strokewidth=1)
+    
+    avg = reduce(+, eachcol(D39_dcps)) ./ ncol(D39_dcps) 
+    stdev = dropdims(std(Array(D39_dcps), dims=2), dims=2)  
+    lines!(ax, time, avg, color=gg_color(2,4), label=rich("D39 Δ", rich("cps"; font=:italic)))
+    band!(ax, time, avg-stdev, avg+stdev, color=(gg_color(2,4), 0.3))
+    scatter!(ax, time, avg, color=gg_color(2,4), marker=:circle,  strokewidth=1)
+	
+    avg = reduce(+, eachcol(SV36_WT)) ./ ncol(SV36_WT) 
+    stdev = dropdims(std(Array(SV36_WT), dims=2), dims=2)  
+    lines!(ax, time, avg, color=gg_color(3,4), label="SV36 wild-type")
+    band!(ax, time, avg-stdev, avg+stdev, color=(gg_color(3,4), 0.3))
+    scatter!(ax, time, avg, color=gg_color(3,4), marker=:circle,  strokewidth=1)
+	
+    avg = reduce(+, eachcol(SV36_dcps)) ./ ncol(SV36_dcps) 
+    stdev = dropdims(std(Array(SV36_dcps), dims=2), dims=2)  
+    lines!(ax, time, avg, color=gg_color(4,4), label=rich("SV36 ", rich("cps"; font=:italic), superscript("*")))
+    band!(ax, time, avg-stdev, avg+stdev, color=(gg_color(4,4), 0.3))
+    scatter!(ax, time, avg, color=gg_color(4,4), marker=:circle,  strokewidth=1)
+
+    fig[1,2] = Legend(fig, ax, merge = true, unique = true, framevisible=false, labelsize=12, rowgap=0)
+
+	ax.rightspinevisible = false
+	ax.topspinevisible = false
+    save("fig1C.svg", fig)
+end
+
 function main()
     path_to_sans = "/root/.fonts/cmunss.ttf"
     path_to_sans_ital = "/root/.fonts/cmunsi.ttf"
     set_theme!(fonts = (; bold=path_to_sans, regular = path_to_sans, italic = path_to_sans_ital))
     data_folder = "../../Data/"
     #vols = DataFrame(CSV.File(joinpath(data_folder, "high_res_data.csv")))
+    #vols_sp = DataFrame(CSV.File(joinpath(data_folder, "high_res_data_sp.csv")))
     #vc_mass_path = "/mnt/e/Brightfield_paper/vc_fig1B/250120_4x_10x_plastic_Drawer1 final/4x/Numerical data/biomass.csv"
     #pa_pf_mass_path = "/mnt/e/Brightfield_paper/nonvc_fig1B/250120_4x_10x_plastic_2_Drawer2 final/4x/Numerical data/biomass.csv"
     #pf_wspf_path = "/mnt/e/Brightfield_paper/Pflu_wspF/4x/Numerical data/biomass.csv"
@@ -446,8 +713,14 @@ function main()
     #vc_mass = DataFrame(CSV.File(vc_mass_path))
     #pa_pf_mass = DataFrame(CSV.File(pa_pf_mass_path))
     #pf_wspf_mass = DataFrame(CSV.File(pf_wspf_path))
-    #sp_mass = DataFrame(CSV.File(sp_mass_path))
-    #fig1B!(vols, vc_mass, pa_pf_mass, pf_wspf_mass, nothing)
+    #sp_mass = last(DataFrame(CSV.File(sp_mass_path)), 1)
+    #fig1B!(vols, vols_sp, vc_mass, pa_pf_mass, pf_wspf_mass, sp_mass)
+    
+	vc_mass_path = "/mnt/e/Brightfield_paper/vc_fig1B/250119_4x_10x_plastic_Drawer1 19-Jan-2025 17-39-44/4x/Numerical data/biomass.csv"
+    sp_mass_path = "/mnt/e/Brightfield_paper/sp_fig1B/4x/Numerical data/biomass.csv"
+    vc_mass = DataFrame(CSV.File(vc_mass_path))
+    sp_mass = DataFrame(CSV.File(sp_mass_path))
+	sample_timelapses!(vc_mass, sp_mass)
 
     #OD_image_path = "/mnt/f/Brightfield_paper/tests/OD_test.tif"
     #fig1A_OD_image(OD_image_path)  
@@ -468,8 +741,8 @@ function main()
     #vc_mass = DataFrame(CSV.File(vc_mass_path))
     #pa_pf_mass = DataFrame(CSV.File(pa_pf_mass_path))
     #pf_wspf_mass = DataFrame(CSV.File(pf_wspf_path))
-    #sp_mass = DataFrame(CSV.File(sp_mass_path))
-    #fig1B!(vols, vc_mass, pa_pf_mass, pf_wspf_mass, nothing)
+    #sp_mass = last(DataFrame(CSV.File(sp_mass_path)), 1)
+    #fig1B!(vols, vols_sp, vc_mass, pa_pf_mass, pf_wspf_mass, sp_mass)
     
     #vols = DataFrame(CSV.File(joinpath(data_folder, "high_res_data.csv")))
     #EVOS_path = "/mnt/e/Brightfield_paper/EVOS/Numerical data/biomass.csv"
@@ -486,6 +759,17 @@ function main()
     #sp_brightfield_path = "/mnt/e/Brightfield_paper/250213_4x_10x_plastic_PMR_Drawer1 13-Feb-2025 12-24-15/4x/Numerical data/biomass.csv"
     #sp_brightfield = DataFrame(CSV.File(sp_brightfield_path))
     #fig2_cps_nocps!(sp_brightfield)   
+    
+
+    #screen_path = "/mnt/e/Brightfield_paper/Spneumo_screen"
+    #screen_plates = [f for f in readdir(screen_path, join=true)]
+    #fig3_stats!(screen_plates)
+    
+    #wash_data_path = "/mnt/e/Brightfield_paper/vc_fig1B/250120_4x_10x_plastic_Drawer1 final/4x/Numerical data/biomass.csv" 
+    #nowash_data_path = "/mnt/e/Brightfield_paper/vc_fig1B/250119_4x_10x_plastic_Drawer1 19-Jan-2025 17-39-44/4x/Numerical data/biomass.csv"
+    #wash_data = DataFrame(CSV.File(wash_data_path))
+    #nowash_data = DataFrame(CSV.File(nowash_data_path))
+    #wash_nowash!(wash_data, nowash_data)
 end
 
 main()

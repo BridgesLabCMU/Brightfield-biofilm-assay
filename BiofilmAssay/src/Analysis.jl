@@ -277,7 +277,6 @@ function timelapse_processing(images, blockDiameter, ntimepoints, shift_thresh, 
         OD_images = Array{Gray{Float32}, 3}(undef, size(images))
         for t in 1:ntimepoints
             if Imax != nothing
-                @show @views minimum((images[:,:,t] .- Imin))
                 OD_images[:,:,t] = @views (-1 .* log10.((images[:,:,t] .- Imin) ./ (Imax .- Imin)))
             else
                 OD_images[:,:,t] = @views (-1 .* log10.((images[:,:,t] .- Imin) ./ (images[:,:,1] .- Imin)))
@@ -303,15 +302,18 @@ function image_processing(image, blockDiameter, fixed_thresh, sig, dir, filename
     overlay = zeros(RGB{N0f8}, size(image)...)
     OD_image = nothing
     biomass = nothing
+    planktonic = nothing
     if Imin != nothing && Imax != nothing
         OD_image = Array{Gray{Float32}, 2}(undef, size(image))
         OD_image .= (-1 .* log10.((image .- Imin) ./ (Imax .- Imin)))
         biomass = Float64(mean(OD_image .* mask))
+        planktonic = Float64(mean(OD_image .* (.!mask)))
     else
         biomass = Float64(mean((1 .- image) .* mask))
+        planktonic = Float64(mean((1 .- image)[.!mask]))
     end
     output_images!(image, mask, overlay, OD_image, dir, filename)
-    return biomass
+    return biomass, planktonic
 end
 
 function analysis_main()
@@ -347,9 +349,11 @@ function analysis_main()
         mkdir("$dir/Processed images")
         mkdir("$dir/Numerical data")
         BF_output_file = "$dir/Numerical data/biomass.csv"
+        planktonic_output_file = "$dir/Numerical data/planktonic.csv"
 
         analyzed = []
         biomass_data = []
+        planktonic_data = []
         columns = []
 		files = [f for f in readdir(dir, join=true) if occursin(r"\.tif$", f)]
         for file in files
@@ -397,10 +401,12 @@ function analysis_main()
                     else
                         height, width = img_dims
                         image = load(file)
-                        push!(biomass_data, image_processing(image, 
+                        biofilm, planktonic = image_processing(image, 
                                                              blockDiameter,
                                                              fixed_thresh, sig,
-                                                             dir, target_base, Imin, Imax))
+                                                             dir, target_base, Imin, Imax)
+                        push!(biomass_data, biofilm)
+                        push!(planktonic_data, planktonic)
                         push!(analyzed, file)
                     end
                 else
@@ -412,5 +418,9 @@ function analysis_main()
 		padded = [vcat(l, fill(Missing, max_length - length(l))) for l in biomass_data]
 		df = DataFrame(padded, Symbol.(columns))
         write(BF_output_file, df)
+        #max_length = maximum(length, planktonic_data)
+		#padded = [vcat(l, fill(Missing, max_length - length(l))) for l in planktonic_data]
+		#df = DataFrame(padded, Symbol.(columns))
+        #write(planktonic_output_file, df)
     end # loop over directories
 end

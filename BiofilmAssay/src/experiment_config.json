@@ -1,1 +1,1 @@
-{"Imin_path":"/mnt/e/Brightfield_paper/tests/10x_Imin_avg.tif","batch_processing":"True","images_directory":["/mnt/e/Brightfield_paper/250213_4x_10x_plastic_PMR_Drawer1 13-Feb-2025 12-24-15/10x"],"Imax_path":"","fixed_thresh":0.04,"dust_correction":"False"}
+{"Imin_path":"/mnt/e/Brightfield_paper/tests/10x_Imin_avg.tif","batch_processing":"True","images_directory":["/mnt/e/Brightfield_paper/sp_fig1B/10x"],"Imax_path":"/mnt/e/Brightfield_paper/sp_fig1B/10x/B6_02_1_Bright Field_1_001.tif","fixed_thresh":0.02,"dust_correction":"True"}
