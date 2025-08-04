@@ -1,9 +1,9 @@
-function display_images!(stack, masks, overlay)
+function display_images!(stack, masks, overlay, blockDiameter)
     normalized = similar(stack)
 	fpMax = maximum(stack)
 	fpMin = minimum(stack)
 	fpMean = (fpMax - fpMin) / 2.0 + fpMin
-	normalized = normalize_local_contrast_output(normalized, stack, copy(stack), 101, fpMean)
+	normalized = normalize_local_contrast_output(normalized, stack, copy(stack), blockDiameter, fpMean)
 	normalized = Gray{N0f8}.(normalized)
     @inbounds for i in CartesianIndices(normalized)
         gray_val = RGB{N0f8}(normalized[i], normalized[i], normalized[i])
@@ -34,7 +34,7 @@ function timelapse_test!(test_images, fixed_thresh, blockDiameter, sig)
     masks = zeros(Bool, size(stack))
     compute_mask!(normalized_stack, masks, fixed_thresh, ntimepoints)
     overlay = zeros(RGB{N0f8}, size(stack)...)
-    display_images!(stack, masks, overlay)
+    display_images!(stack, masks, overlay, blockDiameter)
     return nothing
 end
 
@@ -45,7 +45,7 @@ function image_test!(image_path, fixed_thresh, blockDiameter, sig)
     image_normalized = imfilter(image_normalized, Kernel.gaussian(sig))
     mask = image_normalized .> fixed_thresh
     overlay = zeros(RGB{N0f8}, size(image)...)
-    display_images!(Float64.(image), mask, overlay)
+    display_images!(Float64.(image), mask, overlay, blockDiameter)
     return nothing
 end
 
@@ -185,9 +185,9 @@ function GUI_main()
         fixed_thresh = Gtk4.value(spin_button)
         ntimepoints = length(test_images)
         if ntimepoints == 1
-            image_test!(test_images[1], fixed_thresh, 101, 2)
+            image_test!(test_images[1], fixed_thresh, 201, 2)
         else
-            timelapse_test!(sort(test_images, lt=natural), fixed_thresh, 101, 2)
+            timelapse_test!(sort(test_images, lt=natural), fixed_thresh, 201, 2)
         end
         empty!(test_images)
     end

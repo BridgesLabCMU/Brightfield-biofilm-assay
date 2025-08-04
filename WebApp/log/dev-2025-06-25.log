@@ -1,0 +1,44 @@
+┌ Info: 2025-06-25 21:34:53 Watching ["/root/code/Brightfield-biofilm-assay/WebApp"]
+└ @ GenieAutoReload /root/.julia/packages/GenieAutoReload/qpImd/src/GenieAutoReload.jl:19
+┌ Info: 2025-06-25 21:34:54 Autoreloading
+└ @ GenieAutoReload /root/.julia/packages/GenieAutoReload/qpImd/src/GenieAutoReload.jl:22
+┌ Info: 2025-06-25 21:34:55 
+│ Web Server starting at http://127.0.0.1:8000 
+└ @ Genie.Server /root/.julia/packages/Genie/dFkvA/src/Server.jl:182
+┌ Info: 2025-06-25 21:34:55 Listening on: 127.0.0.1:8000, thread id: 1
+└ @ HTTP.Servers /root/.julia/packages/HTTP/4AUPl/src/Servers.jl:382
+┌ Info: 2025-06-25 21:35:01 Server on 127.0.0.1:8000 closing
+└ @ HTTP.Servers /root/.julia/packages/HTTP/4AUPl/src/Servers.jl:409
+┌ Info: 2025-06-25 21:38:23 Watching ["/root/code/Brightfield-biofilm-assay/WebApp"]
+└ @ GenieAutoReload /root/.julia/packages/GenieAutoReload/qpImd/src/GenieAutoReload.jl:19
+┌ Info: 2025-06-25 21:38:24 Autoreloading
+└ @ GenieAutoReload /root/.julia/packages/GenieAutoReload/qpImd/src/GenieAutoReload.jl:22
+┌ Info: 2025-06-25 21:38:25 
+│ Web Server starting at http://127.0.0.1:8000 
+└ @ Genie.Server /root/.julia/packages/Genie/TKJWe/src/Server.jl:182
+┌ Info: 2025-06-25 21:38:25 Listening on: 127.0.0.1:8000, thread id: 1
+└ @ HTTP.Servers /root/.julia/packages/HTTP/4AUPl/src/Servers.jl:382
+┌ Info: 2025-06-25 21:48:44 Autoreloading
+└ @ GenieAutoReload /root/.julia/packages/GenieAutoReload/qpImd/src/GenieAutoReload.jl:22
+┌ Info: 2025-06-25 21:49:17 Autoreloading
+└ @ GenieAutoReload /root/.julia/packages/GenieAutoReload/qpImd/src/GenieAutoReload.jl:22
+┌ Info: 2025-06-25 21:50:03 Autoreloading
+└ @ GenieAutoReload /root/.julia/packages/GenieAutoReload/qpImd/src/GenieAutoReload.jl:22
+┌ Info: 2025-06-25 21:54:16 Autoreloading
+└ @ GenieAutoReload /root/.julia/packages/GenieAutoReload/qpImd/src/GenieAutoReload.jl:22
+┌ Info: 2025-06-25 21:55:35 Autoreloading
+└ @ GenieAutoReload /root/.julia/packages/GenieAutoReload/qpImd/src/GenieAutoReload.jl:22
+┌ Info: 2025-06-25 21:56:56 Autoreloading
+└ @ GenieAutoReload /root/.julia/packages/GenieAutoReload/qpImd/src/GenieAutoReload.jl:22
+┌ Info: 2025-06-25 21:57:05 Autoreloading
+└ @ GenieAutoReload /root/.julia/packages/GenieAutoReload/qpImd/src/GenieAutoReload.jl:22
+┌ Info: 2025-06-25 21:58:37 Autoreloading
+└ @ GenieAutoReload /root/.julia/packages/GenieAutoReload/qpImd/src/GenieAutoReload.jl:22
+┌ Info: 2025-06-25 22:00:16 Autoreloading
+└ @ GenieAutoReload /root/.julia/packages/GenieAutoReload/qpImd/src/GenieAutoReload.jl:22
+┌ Info: 2025-06-25 22:01:02 Autoreloading
+└ @ GenieAutoReload /root/.julia/packages/GenieAutoReload/qpImd/src/GenieAutoReload.jl:22
+┌ Info: 2025-06-25 22:01:06 Autoreloading
+└ @ GenieAutoReload /root/.julia/packages/GenieAutoReload/qpImd/src/GenieAutoReload.jl:22
+┌ Info: 2025-06-25 22:04:14 Server on 127.0.0.1:8000 closing
+└ @ HTTP.Servers /root/.julia/packages/HTTP/4AUPl/src/Servers.jl:409

@@ -243,13 +243,13 @@ function write_OD_images!(OD_images, output_dir, filename)
     end
 end
 
-function output_images!(stack, masks, overlay, OD_images, output_dir, filename)
+function output_images!(stack, masks, overlay, OD_images, output_dir, filename, blockDiameter)
     filename = split(filename, "/")[end]
     normalized = similar(stack)
 	fpMax = maximum(stack)
 	fpMin = minimum(stack)
 	fpMean = (fpMax - fpMin) / 2.0 + fpMin
-	normalized = normalize_local_contrast_output(normalized, stack, copy(stack), 101, fpMean)
+	normalized = normalize_local_contrast_output(normalized, stack, copy(stack), blockDiameter, fpMean)
 	normalized = Gray{N0f8}.(normalized)
     TiffImages.save("$output_dir/$filename.tif", normalized)
     @inbounds for i in CartesianIndices(normalized)
@@ -302,7 +302,7 @@ function timelapse_processing(images, blockDiameter, ntimepoints, shift_thresh, 
             @inbounds biomasses[t] = @views Float64(mean((1 .- images[:,:,t]) .* masks[:,:,t]))
         end
     end
-    output_images!(images, masks, overlay, OD_images, output_dir, filename)
+    output_images!(images, masks, overlay, OD_images, output_dir, filename, blockDiameter)
     return biomasses
 end
 
@@ -323,14 +323,13 @@ function image_processing(image, blockDiameter, fixed_thresh, sig, output_dir, f
     else
         biomass = Float64(mean((1 .- image) .* mask))
     end
-    output_images!(image, mask, overlay, OD_image, output_dir, filename)
+    output_images!(image, mask, overlay, OD_image, output_dir, filename, blockDiameter)
     return biomass
 end
 
 function analysis_main(file_path, output_path, files, dust_correction, batch_processing, 
-        fixed_thresh, Imin_path, Imax_path)
+        fixed_thresh, Imin_path, Imax_path, blockDiameter)
     sig = 2
-    blockDiameter = 101 
     shift_thresh = 50
 
     Imin = nothing

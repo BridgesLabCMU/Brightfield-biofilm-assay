@@ -61,6 +61,9 @@ row([
             h6("Set fixed threshold for masking"),
             slider(0.0000:0.0001:1.0000, :fixed_thresh),
             p("Fixed threshold = {{fixed_thresh}}", style="margin-bottom: 20px;"),
+            h6("Set block diameter for local contrast"),
+            slider(100:1:500, :block_diameter),
+            p("Block diameter = {{block_diameter}}", style="margin-bottom: 20px;"),
             h6("Choose file(s) to test threshold (optional)"),
            Stipple.select(:selected_test_files, options=:analyze_folder_files, clearable=true, hideselected = true, multiple = true),
             btn(

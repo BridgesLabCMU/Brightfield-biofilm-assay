@@ -107,12 +107,12 @@ function load_processed_display(file_path, filename)
     return processed_image, overlay 
 end
 
-function mask_overlay(stack, masks, overlay)
+function mask_overlay(stack, masks, overlay, blockDiameter)
     normalized = similar(stack)
 	fpMax = maximum(stack)
 	fpMin = minimum(stack)
 	fpMean = (fpMax - fpMin) / 2.0 + fpMin
-	normalized = normalize_local_contrast_output(normalized, stack, copy(stack), 101, fpMean)
+	normalized = normalize_local_contrast_output(normalized, stack, copy(stack), blockDiameter, fpMean)
 	normalized = Gray{N0f8}.(normalized)
     @inbounds for i in CartesianIndices(normalized)
         gray_val = RGB{N0f8}(normalized[i], normalized[i], normalized[i])
@@ -149,7 +149,7 @@ function timelapse_test(file_path, filenames, fixed_thresh, blockDiameter, sig)
     masks = zeros(Bool, size(stack))
     compute_mask!(normalized_stack, masks, fixed_thresh, ntimepoints)
     overlay = zeros(RGB{N0f8}, size(stack)...)
-    return mask_overlay(stack, masks, overlay)
+    return mask_overlay(stack, masks, overlay, blockDiameter)
 end
 
 function image_test(file_path, filename, fixed_thresh, blockDiameter, sig)
@@ -159,7 +159,7 @@ function image_test(file_path, filename, fixed_thresh, blockDiameter, sig)
     image_normalized = imfilter(image_normalized, Kernel.gaussian(sig))
     mask = image_normalized .> fixed_thresh
     overlay = zeros(RGB{N0f8}, size(image)...)
-    return mask_overlay(Float64.(image), mask, overlay)  
+    return mask_overlay(Float64.(image), mask, overlay, blockDiameter)  
 end
 
 end # module

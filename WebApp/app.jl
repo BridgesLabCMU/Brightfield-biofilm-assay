@@ -14,6 +14,7 @@ Pkg.activate(@__DIR__)
 using Main.Analysis
 using Main.Displays
 using Main.utils
+using Main.Analysis: round_odd
 using GenieFramework
 using FileIO
 using TiffImages
@@ -96,6 +97,7 @@ mkpath(DISPLAYS_PATH)
     @in batch_processing = false
     @in timelapse_flag = false 
     @in fixed_thresh = 0.040000
+    @in block_diameter = 101
     @in tab_selected = "Images"
     
     @in selected_raw_display_files = [""]
@@ -149,20 +151,20 @@ mkpath(DISPLAYS_PATH)
                 if length(size(dummy_img)) == 2
                     DISPLAY_IMGPATH = "displays/display.jpg"
                     DISPLAY_MASKPATH = "displays/mask_display.jpg"
-                    @views normalized, overlay = image_test(folder, selected_test_files[1], fixed_thresh, 101, 2)
+                    @views normalized, overlay = image_test(folder, selected_test_files[1], fixed_thresh, round_odd(block_diameter), 2)
                     FileIO.save(joinpath(@__DIR__, "public", DISPLAY_IMGPATH), normalized)
                     FileIO.save(joinpath(@__DIR__, "public", DISPLAY_MASKPATH), overlay)
                 else
                     DISPLAY_IMGPATH = "displays/display.gif"
                     DISPLAY_MASKPATH = "displays/mask_display.gif"
-                    normalized, overlay = timelapse_test(folder, selected_test_files[1], fixed_thresh, 101, 2)
+                    normalized, overlay = timelapse_test(folder, selected_test_files[1], fixed_thresh, round_odd(block_diameter), 2)
                     FileIO.save(joinpath(@__DIR__, "public", DISPLAY_IMGPATH), normalized, fps=10)
                     FileIO.save(joinpath(@__DIR__, "public", DISPLAY_MASKPATH), overlay, fps=10)
                 end
             else
                 DISPLAY_IMGPATH = "displays/display.gif"
                 DISPLAY_MASKPATH = "displays/mask_display.gif"
-                normalized, overlay = timelapse_test(folder, selected_test_files, fixed_thresh, 101, 2)
+                normalized, overlay = timelapse_test(folder, selected_test_files, fixed_thresh, round_odd(block_diameter), 2)
                 FileIO.save(joinpath(@__DIR__, "public", DISPLAY_IMGPATH), normalized, fps=10)
                 FileIO.save(joinpath(@__DIR__, "public", DISPLAY_MASKPATH), overlay, fps=10)
             end
@@ -195,7 +197,7 @@ mkpath(DISPLAYS_PATH)
             end
             folders = [f for f in readdir(FILE_PATH, join=true) if !occursin("zip", f)]
             for f in folders
-                analysis_main(f, joinpath(DOWNLOADS_PATH, basename(f)), readdir(f), dust_correction, timelapse_flag, fixed_thresh, selected_Imin, selected_Imax)
+                analysis_main(f, joinpath(DOWNLOADS_PATH, basename(f)), readdir(f), dust_correction, timelapse_flag, fixed_thresh, selected_Imin, selected_Imax, round_odd(block_diameter))
             end
         else
             if length(zipped_files) == 1  
@@ -205,7 +207,7 @@ mkpath(DISPLAYS_PATH)
                     mkpath(joinpath(DOWNLOADS_PATH, basename(check_folder)))
                 end
             end
-            analysis_main(folder, joinpath(DOWNLOADS_PATH, basename(folder)), analyze_folder_files, dust_correction, timelapse_flag, fixed_thresh, selected_Imin, selected_Imax)
+            analysis_main(folder, joinpath(DOWNLOADS_PATH, basename(folder)), analyze_folder_files, dust_correction, timelapse_flag, fixed_thresh, selected_Imin, selected_Imax, round_odd(block_diameter))
         end
         # Create a zipped version of the downloads folder
         write_zip(DOWNLOADS_ZIP, DOWNLOADS_PATH)

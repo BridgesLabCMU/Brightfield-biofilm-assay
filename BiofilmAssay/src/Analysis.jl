@@ -231,7 +231,7 @@ function output_images!(stack, masks, overlay, OD_images, dir, filename)
 	fpMax = maximum(stack)
 	fpMin = minimum(stack)
 	fpMean = (fpMax - fpMin) / 2.0 + fpMin
-	normalized = normalize_local_contrast_output(normalized, stack, copy(stack), 101, fpMean)
+	normalized = normalize_local_contrast_output(normalized, stack, copy(stack), 201, fpMean)
 	normalized = Gray{N0f8}.(normalized)
     save("$dir/Processed images/$filename.tif", normalized)
     @inbounds for i in CartesianIndices(normalized)
@@ -325,7 +325,7 @@ function analysis_main()
     Imin_path = config["Imin_path"]
     Imax_path = config["Imax_path"]
     sig = 2
-    blockDiameter = 101 
+    blockDiameter = 201 
     shift_thresh = 50
 
     Imin = nothing
