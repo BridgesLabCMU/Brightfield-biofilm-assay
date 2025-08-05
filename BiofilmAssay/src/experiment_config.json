@@ -1,1 +1,1 @@
-{"Imin_path":"","batch_processing":"True","images_directory":["/mnt/c/Users/bridgeslab/Desktop/temp_PMR_10-h_BioSpa"],"Imax_path":"","fixed_thresh":0.03,"dust_correction":"False"}
+{"Imin_path":"/Volumes/T7 Shield/Brightfield_paper/tests/4x_Imin_avg.tif","batch_processing":"True","images_directory":["/Volumes/T7 Shield/Brightfield_paper/Kleb_fig2C/4x"],"Imax_path":"","fixed_thresh":0.03,"dust_correction":"True"}

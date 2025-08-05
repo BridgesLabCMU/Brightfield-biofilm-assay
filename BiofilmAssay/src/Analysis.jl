@@ -277,9 +277,9 @@ function timelapse_processing(images, blockDiameter, ntimepoints, shift_thresh, 
         OD_images = Array{Gray{Float32}, 3}(undef, size(images))
         for t in 1:ntimepoints
             if Imax != nothing
-                OD_images[:,:,t] = @views (-1 .* log10.((images[:,:,t] .- Imin) ./ (Imax .- Imin)))
+                OD_images[:,:,t] = @views (-1 .* log10.((max.(0.00000001, images[:,:,t] .- Imin)) ./ (Imax .- Imin)))
             else
-                OD_images[:,:,t] = @views (-1 .* log10.((images[:,:,t] .- Imin) ./ (images[:,:,1] .- Imin)))
+                OD_images[:,:,t] = @views (-1 .* log10.((max.(0.00000001, images[:,:,t] .- Imin)) ./ (images[:,:,1] .- Imin)))
             end
             @inbounds biomasses[t] = @views Float64(mean(OD_images[:,:,t] .* masks[:,:,t]))
         end
@@ -305,7 +305,7 @@ function image_processing(image, blockDiameter, fixed_thresh, sig, dir, filename
     planktonic = nothing
     if Imin != nothing && Imax != nothing
         OD_image = Array{Gray{Float32}, 2}(undef, size(image))
-        OD_image .= (-1 .* log10.((image .- Imin) ./ (Imax .- Imin)))
+        OD_image .= (-1 .* log10.((max.(0.00000001, image .- Imin)) ./ (Imax .- Imin)))
         biomass = Float64(mean(OD_image .* mask))
         planktonic = Float64(mean(OD_image .* (.!mask)))
     else
