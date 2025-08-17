@@ -154,17 +154,17 @@ def model(p, x):
     errorbars!(ax, pf_averages, vols_avg[7:9], pf_stds, color=Makie.wong_colors()[2], direction = :x)
     errorbars!(ax, pa_averages, vols_avg[10:11], pa_stds, color=Makie.wong_colors()[3], direction = :x)
     errorbars!(ax, sp_averages, vols_avg[12:15], sp_stds, color=Makie.wong_colors()[4], direction = :x)
-    errorbars!(ax, [kleb_averages[2]], [vols_avg[17]], [kleb_stds[2]], color=Makie.wong_colors()[5], direction = :x)
+    errorbars!(ax, kleb_averages[1:2], vols_avg[16:17], kleb_stds[1:2], color=Makie.wong_colors()[5], direction = :x)
     errorbars!(ax, vc_averages, vols_avg[1:6], vols_std[1:6], color=Makie.wong_colors()[1], direction = :y)
     errorbars!(ax, pf_averages, vols_avg[7:9], vols_std[7:9], color=Makie.wong_colors()[2], direction = :y)
     errorbars!(ax, pa_averages, vols_avg[10:11], vols_std[10:11], color=Makie.wong_colors()[3], direction = :y)
     errorbars!(ax, sp_averages, vols_avg[12:15], vols_std[12:15], color=Makie.wong_colors()[4], direction = :y)
-    errorbars!(ax, [kleb_averages[2]], [vols_avg[17]], [vols_std[17]], color=Makie.wong_colors()[5], direction = :y)
+    errorbars!(ax, kleb_averages[1:2], vols_avg[16:17], vols_std[16:17], color=Makie.wong_colors()[5], direction = :y)
     scatter!(ax, vc_averages, vols_avg[1:6], color=Makie.wong_colors()[1], label=rich("V. cholerae"; font=:italic))
     scatter!(ax, pf_averages, vols_avg[7:9], color=Makie.wong_colors()[2], label=rich("P. fluorescens"; font=:italic))
     scatter!(ax, pa_averages, vols_avg[10:11], color=Makie.wong_colors()[3], label=rich("P. aeruginosa"; font=:italic))
     scatter!(ax, sp_averages, vols_avg[12:15], color=Makie.wong_colors()[4], label=rich("S. pneumoniae"; font=:italic))
-    scatter!(ax,[ kleb_averages[2]], [vols_avg[17]], color=Makie.wong_colors()[5], label=rich("K. pneumoniae"; font=:italic))
+    scatter!(ax, kleb_averages[1:2], vols_avg[16:17], color=Makie.wong_colors()[5], label=rich("K. pneumoniae"; font=:italic))
     reg_params = pyconvert(Array, output.beta)
     reg_error = pyconvert(Array, output.sd_beta)
     avg = reg_params[1] .* mass_avg
@@ -363,17 +363,17 @@ def model(p, x):
     errorbars!(ax, pf_averages, vols_avg[7:9], pf_stds, color=Makie.wong_colors()[2], direction = :x)
     errorbars!(ax, pa_averages, vols_avg[10:11], pa_stds, color=Makie.wong_colors()[3], direction = :x)
     errorbars!(ax, sp_averages, vols_avg[12:15], sp_stds, color=Makie.wong_colors()[4], direction = :x)
-    errorbars!(ax, [kleb_averages[2]], [vols_avg[17]], [kleb_stds[2]], color=Makie.wong_colors()[5], direction = :x)
+    errorbars!(ax, kleb_averages[1:2], vols_avg[16:17], kleb_stds[1:2], color=Makie.wong_colors()[5], direction = :x)
     errorbars!(ax, vc_averages, vols_avg[1:6], vols_std[1:6], color=Makie.wong_colors()[1], direction = :y)
     errorbars!(ax, pf_averages, vols_avg[7:9], vols_std[7:9], color=Makie.wong_colors()[2], direction = :y)
     errorbars!(ax, pa_averages, vols_avg[10:11], vols_std[10:11], color=Makie.wong_colors()[3], direction = :y)
     errorbars!(ax, sp_averages, vols_avg[12:15], vols_std[12:15], color=Makie.wong_colors()[4], direction = :y)
-    errorbars!(ax, [kleb_averages[2]], [vols_avg[17]], [vols_std[17]], color=Makie.wong_colors()[5], direction = :y)
+    errorbars!(ax, kleb_averages[1:2], vols_avg[16:17], vols_std[16:17], color=Makie.wong_colors()[5], direction = :y)
     scatter!(ax, vc_averages, vols_avg[1:6], color=Makie.wong_colors()[1], label=rich("V. cholerae"; font=:italic))
     scatter!(ax, pf_averages, vols_avg[7:9], color=Makie.wong_colors()[2], label=rich("P. fluorescens"; font=:italic))
     scatter!(ax, pa_averages, vols_avg[10:11], color=Makie.wong_colors()[3], label=rich("P. aeruginosa"; font=:italic))
     scatter!(ax, sp_averages, vols_avg[12:15], color=Makie.wong_colors()[4], label=rich("S. pneumoniae"; font=:italic))
-    scatter!(ax,[ kleb_averages[2]], [vols_avg[17]], color=Makie.wong_colors()[5], label=rich("K. pneumoniae"; font=:italic))
+    scatter!(ax, kleb_averages[1:2], vols_avg[16:17], color=Makie.wong_colors()[5], label=rich("K. pneumoniae"; font=:italic))
     reg_params = pyconvert(Array, output.beta)
     reg_error = pyconvert(Array, output.sd_beta)
     avg = reg_params[1] .* mass_avg
@@ -520,28 +520,28 @@ function EVOS_Nikon!(vols, EVOS, Nikon)
 	vols = sort(vols, :order)
 	select!(vols, Not(:order))
 	
-    order_list = ["vpsL_0001", "vpsL_0002", "vpsL_0003", 
-                  "0ara_0001", "0ara_0002", "0ara_0003", 
-                  "0025ara_0001", "0025ara_0002", "0025ara_0003",
-                  "0035ara_0001", "0035ara_0002", "0035ara_0003",
-                  "005ara_0001", "005ara_0002", "005ara_0003",
-                  "01ara_0001", "01ara_0002", "01ara_0003",
+    order_list = ["vpsL_001", "vpsL_002", "vpsL_003", 
+                  "0ara_001", "0ara_002", "0ara_003", 
+                  "0025ara_001", "0025ara_002", "0025ara_003",
+                  "0035ara_001", "0035ara_002", "0035ara_003",
+                  "005ara_001", "005ara_002", "005ara_003",
+                  "01ara_001", "01ara_002", "01ara_003",
                   ] 
 	order_map = Dict(substring => idx for (idx, substring) in enumerate(order_list))
 
-    EVOS = stack(EVOS, Not([]), variable_name = :FilePath, value_name = :Value)
-    EVOS = EVOS[[!occursin("Im", str) for str in EVOS.FilePath], :]
-	EVOS.order = [order_map[substring] for row in eachrow(EVOS) for substring in order_list if occursin(substring, row.FilePath)]
-	EVOS = sort(EVOS, :order)
-	select!(EVOS, Not(:order))
-    col2 = EVOS.Value
-    EVOS_averages = [mean(col2[i:i+2]) for i in 1:3:length(col2) if i+2 <= length(col2)]
-    EVOS_stds = [std(col2[i:i+2]) for i in 1:3:length(col2) if i+2 <= length(col2)]
+    Nikon = stack(Nikon, Not([]), variable_name = :FilePath, value_name = :Value)
+    Nikon = Nikon[[!occursin("Im", str) for str in Nikon.FilePath], :]
+	Nikon.order = [order_map[substring] for row in eachrow(Nikon) for substring in order_list if occursin(substring, row.FilePath)]
+	Nikon = sort(Nikon, :order)
+	select!(Nikon, Not(:order))
+    col2 = Nikon.Value
+    Nikon_averages = [mean(col2[i:i+2]) for i in 1:3:length(col2) if i+2 <= length(col2)]
+    Nikon_stds = [std(col2[i:i+2]) for i in 1:3:length(col2) if i+2 <= length(col2)]
 
-    p0 = [(EVOS_averages[2]-EVOS_averages[1])/(vols[4,2]-vols[1,2])]
+    p0 = [(Nikon_averages[2]-Nikon_averages[1])/(vols[4,2]-vols[1,2])]
 
-    mass_avg = vcat(EVOS_averages)
-    stds = vcat(EVOS_stds)
+    mass_avg = vcat(Nikon_averages)
+    stds = vcat(Nikon_stds)
     vols = vols[[(!occursin("Pf", str) && !occursin("Pa",str)) for str in vols.first], :]
     col2 = vols.second
     vols_avg = [mean(col2[i:i+2]) for i in 1:3:length(col2) if i+2 <= length(col2)]
@@ -560,9 +560,9 @@ def model(p, x):
 
     fig = Figure(size=(3.7*72,3*72))
     ax = CairoMakie.Axis(fig[1, 1], xlabel="BF-biofilm biomass (a.u.)", ylabel="CF-biofilm biomass (μm³)")
-    errorbars!(ax, EVOS_averages, vols_avg[1:6], EVOS_stds, color=Makie.wong_colors()[1], direction = :x)
-    errorbars!(ax, EVOS_averages, vols_avg[1:6], vols_std[1:6], color=Makie.wong_colors()[1], direction = :y)
-    scatter!(ax, EVOS_averages, vols_avg[1:6], color=Makie.wong_colors()[1], label=rich("V. cholerae"; font=:italic))
+    errorbars!(ax, Nikon_averages, vols_avg[1:6], Nikon_stds, color=Makie.wong_colors()[1], direction = :x)
+    errorbars!(ax, Nikon_averages, vols_avg[1:6], vols_std[1:6], color=Makie.wong_colors()[1], direction = :y)
+    scatter!(ax, Nikon_averages, vols_avg[1:6], color=Makie.wong_colors()[1], label=rich("V. cholerae"; font=:italic))
 	ax.rightspinevisible = false
 	ax.topspinevisible = false
     reg_params = pyconvert(Array, output.beta)
@@ -570,7 +570,7 @@ def model(p, x):
     avg = reg_params[1] .* mass_avg
     lines!(ax, mass_avg, avg, color="black")
     band!(ax, mass_avg, (reg_params[1]-reg_error[1]).*mass_avg, (reg_params[1]+reg_error[1]).*mass_avg, color=(:black, 0.2))
-    save("figS1B.svg", fig)
+    save("figS1C.svg", fig)
 end
 
 function figS1C!(vc_mass, CV)
@@ -1027,7 +1027,7 @@ function main()
     path_to_sans_ital = "/root/.fonts/cmunsi.ttf"
     set_theme!(fonts = (; bold=path_to_sans, regular = path_to_sans, italic = path_to_sans_ital))
     data_folder = "../../Data/"
-    #correction = 0.325^3
+    correction = 0.325^3
     #vols = DataFrame(CSV.File(joinpath(data_folder, "high_res_data.csv")))
     #vols = mapcols(col -> eltype(col) <: Number ? col .* correction : col, vols)
     #vols_sp = DataFrame(CSV.File(joinpath(data_folder, "high_res_data_sp_new.csv")))
@@ -1083,9 +1083,10 @@ function main()
     kleb_mass = last(DataFrame(CSV.File(kleb_mass_path)), 1)
     figS1A!(vols, vols_sp, vols_kl, vc_mass, pa_pf_mass, pf_wspf_mass, sp_mass, kleb_mass)
     
-    #vols = DataFrame(CSV.File(joinpath(data_folder, "high_res_data.csv"))) .* 0.325^3
-    #EVOS_path = "/mnt/e/Brightfield_paper/EVOS/Numerical data/biomass.csv"
-    #Nikon_path = "/mnt/e/Brightfield_paper/Nikon/Numerical data/biomass.csv"
+    #vols = DataFrame(CSV.File(joinpath(data_folder, "high_res_data.csv")))
+    #vols = mapcols(col -> eltype(col) <: Number ? col .* correction : col, vols)
+    #EVOS_path = "../../Data/EVOS/biomass.csv"
+    #Nikon_path = "../../Data/Nikon/biomass.csv"
     #EVOS = DataFrame(CSV.File(EVOS_path))
     #Nikon = DataFrame(CSV.File(Nikon_path))
     #EVOS_Nikon!(vols, EVOS, Nikon)
