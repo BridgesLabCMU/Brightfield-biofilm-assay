@@ -17,24 +17,12 @@ function main()
     z_res = 0.5
     zstack_thresh = 0.02
     biomasses = []
-
-    # collect only the _noback files
     files = [f for f in readdir(images_path, join=true) if occursin("_noback.tif", f)]
 
     for noback_fn in files
-        # load the noback image for everything except z-projection
-@show noback_fn
         noback = TiffImages.load(noback_fn)
 
-        # -------------------------------------------------------------------
-        # load the corresponding denoised file for z-projection + thresholding
-        #denoised_fn = replace(noback_fn,
-        #                      "_noback.tif" => " - Denoised.ome.tif")
-        #denoised = TiffImages.load(denoised_fn)
-        # -------------------------------------------------------------------
-
-        # compute z-projection on the denoised stack
-        _, _, _ = size(noback)  # unpack to ensure it's 3D
+        _, _, _ = size(noback) 
         zstack = imfilter(
             dropdims(sum(noback, dims=3), dims=3),
             Kernel.gaussian(10)
@@ -43,7 +31,6 @@ function main()
         otsu_thresh = find_threshold(zstack, Otsu())
         crop_mask = zstack .> max(zstack_thresh, otsu_thresh * 0.9)
 
-        # now do the per-slice work on the original noback image
         warped = imresize(noback, ratio=(1,1,z_res/xy_res))
         biomass = 0
         masks = similar(warped)

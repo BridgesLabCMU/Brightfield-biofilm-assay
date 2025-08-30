@@ -5,41 +5,33 @@ export unzip_folder, write_zip
 using ZipFile
 
 function unzip_folder(zip_path)
-    # Destination folder name derived from zip path
     destination_path = replace(zip_path, r"\.zip$" => "")
-
-    # Create the destination folder if it doesn't exist
     if !isdir(destination_path)
         mkdir(destination_path)
     end
 
-    # Open the zip file
     r = ZipFile.Reader(zip_path)
     try
         for file in r.files
-            # Construct the full path for the destination file
             file_destination = joinpath(destination_path, file.name)
 
-            # Check if the entry is a directory
             if endswith(file.name, "/")
                 if !isdir(file_destination)
                     mkdir(file_destination)
                 end
             else
-                # Ensure parent directories exist
                 parent_dir = dirname(file_destination)
                 if !isdir(parent_dir)
                     mkdir(parent_dir)
                 end
 
-                # Extract the file by directly reading its contents
                 open(file_destination, "w") do output_stream
                     write(output_stream, read(file))
                 end
             end
         end
     finally
-        close(r)  # Ensure the ZipFile.Reader is closed
+        close(r)  
     end
 end
 

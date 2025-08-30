@@ -1,13 +1,3 @@
-##################################################
-# TODO: 
-# 1. Figure out why image updates only work when switching regimes (i.e. image -> gif or gif -> image, not image -> image)
-# Reload fixes the issue, but how do I get it to do this automatically?
-# It seems to work fine in the tab that is not currently active
-# 2. Bug with clearing selected files 
-# 3. Clean up redundant code in app.jl
-# 4. Delete folders after use?
-##################################################
-
 using Pkg
 Pkg.activate(@__DIR__)
 
@@ -209,7 +199,6 @@ mkpath(DISPLAYS_PATH)
             end
             analysis_main(folder, joinpath(DOWNLOADS_PATH, basename(folder)), analyze_folder_files, dust_correction, timelapse_flag, fixed_thresh, selected_Imin, selected_Imax, round_odd(block_diameter))
         end
-        # Create a zipped version of the downloads folder
         write_zip(DOWNLOADS_ZIP, DOWNLOADS_PATH)
         processed_images = readdir(joinpath(DOWNLOADS_PATH, basename(folder)))
         AnalyzeButtonProgress_processing = false

@@ -263,7 +263,6 @@ function output_images!(stack, masks, overlay, OD_images, output_dir, filename, 
 end
 
 function extract_base_and_ext(filename::String)
-    # The batch criterion is that there is a number at the end of the filename
     matches = match(r"^(.*\D)\d+(\.[^\.]+)$", filename)
     if isnothing(matches)
         base, ext = splitext(filename)
@@ -351,7 +350,6 @@ function analysis_main(file_path, output_path, files, dust_correction, batch_pro
 	outer_iters = 10
 	inner_iters = 5
 
-	# Initialize the progress bar for the outer loop
 	progress = Progress(length(files), desc="% analysis done")
 	for file in files
 		next!(progress)
